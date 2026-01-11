@@ -16,3 +16,6 @@ google-services.json
 
 # Logs
 *.log
+
+# Backend folder (moved to separate location)
+backend/
