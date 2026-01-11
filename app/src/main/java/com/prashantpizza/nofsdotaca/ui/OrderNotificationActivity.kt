@@ -202,27 +202,34 @@ fun OrderNotificationScreen(
     onAccept: () -> Unit,
     onReject: () -> Unit
 ) {
+    // Black transparent overlay background
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color(0xFF1A1A1A))
+            .background(Color.Black.copy(alpha = 0.85f)),
+        contentAlignment = Alignment.Center
     ) {
-        Column(
+        // Popup card - similar to foreground dialog
+        Card(
             modifier = Modifier
-                .fillMaxSize()
-                .padding(24.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.SpaceBetween
+                .fillMaxWidth(0.92f)
+                .wrapContentHeight(),
+            shape = RoundedCornerShape(20.dp),
+            colors = CardDefaults.cardColors(
+                containerColor = Color(0xFF1E1E1E)
+            ),
+            elevation = CardDefaults.cardElevation(defaultElevation = 16.dp)
         ) {
-            // Top section - Order icon and title
             Column(
-                horizontalAlignment = Alignment.CenterHorizontally,
-                modifier = Modifier.padding(top = 60.dp)
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(24.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 // Order icon
                 Box(
                     modifier = Modifier
-                        .size(100.dp)
+                        .size(80.dp)
                         .clip(CircleShape)
                         .background(Color(0xFF2196F3)),
                     contentAlignment = Alignment.Center
@@ -231,108 +238,99 @@ fun OrderNotificationScreen(
                         imageVector = Icons.Default.ShoppingCart,
                         contentDescription = "Order",
                         tint = Color.White,
-                        modifier = Modifier.size(50.dp)
+                        modifier = Modifier.size(40.dp)
                     )
                 }
                 
-                Spacer(modifier = Modifier.height(24.dp))
+                Spacer(modifier = Modifier.height(16.dp))
                 
+                // Title
                 Text(
                     text = order.title,
-                    fontSize = 28.sp,
+                    fontSize = 24.sp,
                     fontWeight = FontWeight.Bold,
                     color = Color.White
                 )
                 
                 Spacer(modifier = Modifier.height(8.dp))
                 
+                // Body
                 Text(
                     text = order.body,
-                    fontSize = 16.sp,
-                    color = Color.Gray
+                    fontSize = 14.sp,
+                    color = Color.Gray,
+                    textAlign = TextAlign.Center
                 )
-            }
-            
-            // Middle section - Order details card
-            Card(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 16.dp),
-                shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(
-                    containerColor = Color(0xFF2A2A2A)
-                )
-            ) {
-                Column(
-                    modifier = Modifier.padding(20.dp)
-                ) {
-                    OrderDetailRow("Order ID", order.orderId)
-                    Spacer(modifier = Modifier.height(12.dp))
-                    OrderDetailRow("Customer", order.customerName)
-                    Spacer(modifier = Modifier.height(12.dp))
-                    OrderDetailRow("Items", order.items)
-                    Spacer(modifier = Modifier.height(12.dp))
-                    OrderDetailRow("Amount", order.amount, highlight = true)
-                    Spacer(modifier = Modifier.height(12.dp))
-                    OrderDetailRow("Address", order.address)
-                    Spacer(modifier = Modifier.height(12.dp))
-                    OrderDetailRow("Time", order.getFormattedTime())
-                }
-            }
-            
-            // Bottom section - Action buttons
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(bottom = 40.dp),
-                horizontalArrangement = Arrangement.SpaceEvenly
-            ) {
-                // Reject button
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    FloatingActionButton(
-                        onClick = onReject,
-                        containerColor = Color(0xFFE53935),
-                        modifier = Modifier.size(70.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Close,
-                            contentDescription = "Reject",
-                            tint = Color.White,
-                            modifier = Modifier.size(32.dp)
-                        )
-                    }
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Text(
-                        text = "Reject",
-                        color = Color.White,
-                        fontSize = 14.sp
+                
+                Spacer(modifier = Modifier.height(20.dp))
+                
+                // Order details card
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = Color(0xFF2A2A2A)
                     )
+                ) {
+                    Column(
+                        modifier = Modifier.padding(16.dp)
+                    ) {
+                        OrderDetailRow("Order ID", order.orderId)
+                        Spacer(modifier = Modifier.height(10.dp))
+                        OrderDetailRow("Customer", order.customerName)
+                        Spacer(modifier = Modifier.height(10.dp))
+                        OrderDetailRow("Items", order.items)
+                        Spacer(modifier = Modifier.height(10.dp))
+                        OrderDetailRow("Amount", order.amount, highlight = true)
+                        Spacer(modifier = Modifier.height(10.dp))
+                        OrderDetailRow("Address", order.address)
+                        Spacer(modifier = Modifier.height(10.dp))
+                        OrderDetailRow("Time", order.getFormattedTime())
+                    }
                 }
                 
-                // Accept button
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally
+                Spacer(modifier = Modifier.height(24.dp))
+                
+                // Action buttons
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    FloatingActionButton(
-                        onClick = onAccept,
-                        containerColor = Color(0xFF4CAF50),
-                        modifier = Modifier.size(70.dp)
+                    // Reject button
+                    Button(
+                        onClick = onReject,
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(50.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = Color(0xFFE53935)
+                        ),
+                        shape = RoundedCornerShape(12.dp)
                     ) {
-                        Icon(
-                            imageVector = Icons.Default.Call,
-                            contentDescription = "Accept",
-                            tint = Color.White,
-                            modifier = Modifier.size(32.dp)
+                        Text(
+                            text = "Reject",
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.Bold
+                    )
+                }
+                    
+                    // Accept button
+                    Button(
+                        onClick = onAccept,
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(50.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = Color(0xFF4CAF50)
+                        ),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Text(
+                            text = "Accept",
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.Bold
                         )
                     }
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Text(
-                        text = "Accept",
-                        color = Color.White,
-                        fontSize = 14.sp
-                    )
                 }
             }
         }
