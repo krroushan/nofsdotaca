@@ -1,0 +1,102 @@
+package com.prashantpizza.nofsdotaca.service
+
+import android.app.Application
+import android.util.Log
+import com.google.firebase.messaging.FirebaseMessagingService
+import com.google.firebase.messaging.RemoteMessage
+import com.prashantpizza.nofsdotaca.model.OrderNotification
+import com.prashantpizza.nofsdotaca.notification.NotificationHelper
+import com.prashantpizza.nofsdotaca.utils.AppStateTracker
+
+class OrderFirebaseMessagingService : FirebaseMessagingService() {
+    
+    companion object {
+        private const val TAG = "OrderFCMService"
+        private const val NOTIFICATION_TYPE_NEW_ORDER = "new_order"
+    }
+    
+    override fun onNewToken(token: String) {
+        super.onNewToken(token)
+        Log.d(TAG, "New FCM token: $token")
+        
+        // TODO: Send token to your backend server
+        // This should be done when user logs in or app starts
+        sendTokenToServer(token)
+    }
+    
+    override fun onMessageReceived(message: RemoteMessage) {
+        super.onMessageReceived(message)
+        
+        Log.d(TAG, "Message received from: ${message.from}")
+        
+        // Check if message contains data payload
+        if (message.data.isNotEmpty()) {
+            Log.d(TAG, "Message data payload: ${message.data}")
+            handleDataMessage(message.data)
+        }
+        
+        // Check if message contains notification payload
+        message.notification?.let {
+            Log.d(TAG, "Message notification body: ${it.body}")
+        }
+    }
+    
+    private fun handleDataMessage(data: Map<String, String>) {
+        val notificationType = data["type"] ?: return
+        
+        when (notificationType) {
+            NOTIFICATION_TYPE_NEW_ORDER -> {
+                handleNewOrderNotification(data)
+            }
+            else -> {
+                Log.w(TAG, "Unknown notification type: $notificationType")
+            }
+        }
+    }
+    
+    private fun handleNewOrderNotification(data: Map<String, String>) {
+        try {
+            // Parse order data
+            val order = OrderNotification.fromFCMData(data)
+            
+            Log.d(TAG, "New order notification: ${order.orderId}")
+            Log.d(TAG, "App in foreground: ${AppStateTracker.isAppInForeground}")
+            
+            // Always show full-screen notification for better UX
+            // The activity will handle whether to show as full-screen or dialog
+            Log.d(TAG, "Showing full-screen notification...")
+            NotificationHelper.showFullScreenNotification(applicationContext, order)
+            
+            // Also send broadcast for foreground dialog (as backup)
+            if (AppStateTracker.isAppInForeground) {
+                Log.d(TAG, "Also broadcasting for foreground dialog")
+                broadcastOrderNotification(order)
+            }
+            
+        } catch (e: Exception) {
+            Log.e(TAG, "Error handling new order notification", e)
+        }
+    }
+    
+    private fun broadcastOrderNotification(order: OrderNotification) {
+        // Send local broadcast to MainActivity to show dialog
+        val intent = android.content.Intent("com.prashantpizza.nofsdotaca.NEW_ORDER")
+        intent.putExtra("order", order)
+        androidx.localbroadcastmanager.content.LocalBroadcastManager
+            .getInstance(applicationContext)
+            .sendBroadcast(intent)
+    }
+    
+    private fun sendTokenToServer(token: String) {
+        // TODO: Implement sending token to your backend
+        // Example:
+        // CoroutineScope(Dispatchers.IO).launch {
+        //     try {
+        //         yourApiService.registerFCMToken(token)
+        //     } catch (e: Exception) {
+        //         Log.e(TAG, "Error sending token to server", e)
+        //     }
+        // }
+        Log.d(TAG, "TODO: Send token to server: $token")
+    }
+}

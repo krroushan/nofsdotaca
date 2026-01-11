@@ -1,0 +1,18 @@
+# Gradle files
+.gradle/
+build/
+local.properties
+*.iml
+.idea/
+.DS_Store
+
+# Node modules
+node_modules/
+package-lock.json
+
+# Firebase credentials (IMPORTANT!)
+firebase-service-account.json
+google-services.json
+
+# Logs
+*.log

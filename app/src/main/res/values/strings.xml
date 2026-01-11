@@ -1,0 +1,19 @@
+<resources>
+    <string name="app_name">New Order Full Screen Display Over The apps Card app</string>
+    
+    <!-- Notification strings -->
+    <string name="notification_channel_name">Order Notifications</string>
+    <string name="notification_channel_description">Notifications for new orders</string>
+    <string name="new_order_title">New Order</string>
+    <string name="new_order_body">You have a new order!</string>
+    <string name="accept_order">Accept</string>
+    <string name="reject_order">Reject</string>
+    <string name="order_accepted">Order accepted successfully</string>
+    <string name="order_rejected">Order rejected successfully</string>
+    
+    <!-- Permission strings -->
+    <string name="notification_permission_required">Notification permission is required to receive order notifications</string>
+    <string name="full_screen_permission_required">Full screen notification permission is required for incoming orders</string>
+    <string name="battery_optimization_warning">Battery optimization is enabled. Notifications may be delayed or missed.</string>
+    <string name="battery_optimization_disable">Disable battery optimization for reliable notifications</string>
+</resources>
