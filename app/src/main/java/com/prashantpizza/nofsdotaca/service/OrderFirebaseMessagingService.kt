@@ -56,23 +56,19 @@ class OrderFirebaseMessagingService : FirebaseMessagingService() {
     
     private fun handleNewOrderNotification(data: Map<String, String>) {
         try {
-            // Parse order data
             val order = OrderNotification.fromFCMData(data)
-            
             Log.d(TAG, "New order notification: ${order.orderId}")
             Log.d(TAG, "App in foreground: ${AppStateTracker.isAppInForeground}")
             
-            // Always show full-screen notification for better UX
-            // The activity will handle whether to show as full-screen or dialog
-            Log.d(TAG, "Showing full-screen notification...")
-            NotificationHelper.showFullScreenNotification(applicationContext, order)
-            
-            // Also send broadcast for foreground dialog (as backup)
             if (AppStateTracker.isAppInForeground) {
-                Log.d(TAG, "Also broadcasting for foreground dialog")
+                // App is in foreground - show dialog inside the app
+                Log.d(TAG, "App in foreground - broadcasting for in-app dialog")
                 broadcastOrderNotification(order)
+            } else {
+                // App is in background/killed - show full-screen notification
+                Log.d(TAG, "App in background - showing full-screen notification")
+                NotificationHelper.showFullScreenNotification(applicationContext, order)
             }
-            
         } catch (e: Exception) {
             Log.e(TAG, "Error handling new order notification", e)
         }

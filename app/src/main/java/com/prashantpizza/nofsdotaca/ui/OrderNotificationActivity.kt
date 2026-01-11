@@ -4,6 +4,7 @@ import android.content.Context
 import android.media.AudioAttributes
 import android.media.Ringtone
 import android.media.RingtoneManager
+import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.os.VibrationEffect
@@ -99,8 +100,17 @@ class OrderNotificationActivity : ComponentActivity() {
     
     private fun startRingtoneAndVibration() {
         try {
-            // Start ringtone
-            val notificationUri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_RINGTONE)
+            // Try to use custom ringtone first, fallback to system ringtone
+            val customRingtoneResId = resources.getIdentifier("neworder", "raw", packageName)
+            
+            val notificationUri = if (customRingtoneResId != 0) {
+                // Use custom ringtone from res/raw/order_ringtone.mp3
+                Uri.parse("android.resource://$packageName/$customRingtoneResId")
+            } else {
+                // Fallback to system default ringtone
+                RingtoneManager.getDefaultUri(RingtoneManager.TYPE_RINGTONE)
+            }
+            
             ringtone = RingtoneManager.getRingtone(applicationContext, notificationUri)
             
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
@@ -112,6 +122,7 @@ class OrderNotificationActivity : ComponentActivity() {
             }
             
             ringtone?.play()
+            Log.d(TAG, "Ringtone started (custom: ${customRingtoneResId != 0})")
             
             // Start vibration
             vibrator = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {

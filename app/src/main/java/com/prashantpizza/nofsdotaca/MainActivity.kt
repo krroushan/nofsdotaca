@@ -6,10 +6,15 @@ import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.content.pm.PackageManager
+import android.media.MediaPlayer
+import android.media.RingtoneManager
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.os.PowerManager
+import android.os.VibrationEffect
+import android.os.Vibrator
+import android.os.VibratorManager
 import android.provider.Settings
 import android.util.Log
 import android.widget.Toast
@@ -51,6 +56,11 @@ class MainActivity : ComponentActivity() {
     private var isBatteryOptimized by mutableStateOf(true)
     private var hasOverlayPermission by mutableStateOf(false)
     
+    // Media player and vibrator for foreground notifications
+    private var mediaPlayer: MediaPlayer? = null
+    private var vibrator: Vibrator? = null
+    private var currentRingtoneOrderId: String? = null
+    
     // Overlay permission result launcher
     private val overlayPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.StartActivityForResult()
@@ -84,8 +94,17 @@ class MainActivity : ComponentActivity() {
             
             order?.let {
                 Log.d(TAG, "Received order notification in foreground: ${it.orderId}")
-                currentOrder = it
-                showOrderDialog = true
+                
+                // Only process if this is a new order (prevent duplicate broadcasts)
+                if (currentRingtoneOrderId != it.orderId) {
+                    currentOrder = it
+                    showOrderDialog = true
+                    currentRingtoneOrderId = it.orderId
+                    // Play ringtone and vibrate for foreground notification
+                    startRingtoneAndVibration()
+                } else {
+                    Log.d(TAG, "Ignoring duplicate broadcast for order: ${it.orderId}")
+                }
             }
         }
     }
@@ -131,7 +150,10 @@ class MainActivity : ComponentActivity() {
                         order = currentOrder!!,
                         onAccept = { handleAccept(currentOrder!!) },
                         onReject = { handleReject(currentOrder!!) },
-                        onDismiss = { showOrderDialog = false }
+                        onDismiss = { 
+                            stopRingtoneAndVibration()
+                            showOrderDialog = false 
+                        }
                     )
                 }
             }
@@ -141,6 +163,7 @@ class MainActivity : ComponentActivity() {
     override fun onDestroy() {
         super.onDestroy()
         LocalBroadcastManager.getInstance(this).unregisterReceiver(orderReceiver)
+        stopRingtoneAndVibration()
     }
     
     override fun onResume() {
@@ -331,7 +354,117 @@ class MainActivity : ComponentActivity() {
         Log.d(TAG, "=== TEST NOTIFICATION COMPLETED ===")
     }
     
+    private fun startRingtoneAndVibration() {
+        // Stop any existing ringtone first to avoid multiple instances
+        stopRingtoneAndVibration()
+        
+        try {
+            // Only start if not already playing
+            if (mediaPlayer == null) {
+                // Try to use custom ringtone first, fallback to system ringtone
+                val customRingtoneResId = resources.getIdentifier("neworder", "raw", packageName)
+                
+                mediaPlayer = MediaPlayer().apply {
+                    if (customRingtoneResId != 0) {
+                        // Use custom ringtone from res/raw/order_ringtone.mp3
+                        val afd = resources.openRawResourceFd(customRingtoneResId)
+                        setDataSource(afd.fileDescriptor, afd.startOffset, afd.length)
+                        afd.close()
+                        Log.d(TAG, "Using custom ringtone")
+                    } else {
+                        // Fallback to system default ringtone
+                        val notificationUri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_RINGTONE)
+                        setDataSource(applicationContext, notificationUri)
+                        Log.d(TAG, "Using system default ringtone")
+                    }
+                    isLooping = true
+                    setOnErrorListener { mp, what, extra ->
+                        Log.e(TAG, "MediaPlayer error: what=$what, extra=$extra")
+                        stopRingtoneAndVibration()
+                        true
+                    }
+                    prepare()
+                    start()
+                }
+                Log.d(TAG, "Ringtone started for foreground notification")
+            } else {
+                Log.d(TAG, "Ringtone already playing, skipping")
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error playing ringtone", e)
+            mediaPlayer = null
+        }
+
+        // Start vibration only if not already vibrating
+        if (vibrator == null) {
+            vibrator = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                val vibratorManager = getSystemService(Context.VIBRATOR_MANAGER_SERVICE) as VibratorManager
+                vibratorManager.defaultVibrator
+            } else {
+                @Suppress("DEPRECATION")
+                getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
+            }
+
+            val vibrationPattern = longArrayOf(0, 1000, 500, 1000)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                vibrator?.vibrate(VibrationEffect.createWaveform(vibrationPattern, 0))
+            } else {
+                @Suppress("DEPRECATION")
+                vibrator?.vibrate(vibrationPattern, 0)
+            }
+            Log.d(TAG, "Vibration started for foreground notification")
+        } else {
+            Log.d(TAG, "Vibration already active, skipping")
+        }
+    }
+
+    private fun stopRingtoneAndVibration() {
+        Log.d(TAG, "Stopping ringtone and vibration...")
+        
+        // Force stop media player
+        try {
+            mediaPlayer?.let {
+                try {
+                    if (it.isPlaying) {
+                        it.stop()
+                        Log.d(TAG, "MediaPlayer stopped")
+                    }
+                } catch (e: Exception) {
+                    Log.e(TAG, "Error stopping MediaPlayer", e)
+                }
+                
+                try {
+                    it.release()
+                    Log.d(TAG, "MediaPlayer released")
+                } catch (e: Exception) {
+                    Log.e(TAG, "Error releasing MediaPlayer", e)
+                }
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error in MediaPlayer cleanup", e)
+        } finally {
+            mediaPlayer = null
+        }
+        
+        // Force stop vibration
+        try {
+            vibrator?.let {
+                it.cancel()
+                Log.d(TAG, "Vibration cancelled")
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error cancelling vibration", e)
+        } finally {
+            vibrator = null
+        }
+        
+        // Clear the current order ID
+        currentRingtoneOrderId = null
+        Log.d(TAG, "Ringtone and vibration cleanup complete")
+    }
+    
     private fun handleAccept(order: OrderNotification) {
+        stopRingtoneAndVibration()
         lifecycleScope.launch {
             val result = repository.acceptOrder(order)
             result.onSuccess {
@@ -343,6 +476,7 @@ class MainActivity : ComponentActivity() {
     }
     
     private fun handleReject(order: OrderNotification) {
+        stopRingtoneAndVibration()
         lifecycleScope.launch {
             val result = repository.rejectOrder(order)
             result.onSuccess {
