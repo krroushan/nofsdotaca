@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">New Order Full Screen Display Over The apps Card app</string>
+    <string name="app_name">Restaurant App</string>
     
     <!-- Notification strings -->
     <string name="notification_channel_name">Order Notifications</string>

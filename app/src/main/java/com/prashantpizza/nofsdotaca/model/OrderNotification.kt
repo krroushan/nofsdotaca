@@ -8,7 +8,8 @@ import java.util.Locale
 
 @Parcelize
 data class OrderNotification(
-    val orderId: String,
+    val orderId: String, // orderNumber (e.g., "PP20251852")
+    val orderMongoId: String? = null, // MongoDB ObjectId (e.g., "696516776bd1c15ddd0a9154")
     val title: String,
     val body: String,
     val customerName: String,
@@ -44,6 +45,7 @@ data class OrderNotification(
         fun fromFCMData(data: Map<String, String>): OrderNotification {
             return OrderNotification(
                 orderId = data["orderId"] ?: "ORD-${System.currentTimeMillis() % 100000}",
+                orderMongoId = data["orderMongoId"], // MongoDB ObjectId if available
                 title = data["title"] ?: "New Order",
                 body = data["body"] ?: "You have a new order!",
                 customerName = data["customerName"] ?: "John Doe",

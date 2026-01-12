@@ -25,22 +25,35 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.prashantpizza.nofsdotaca.ui.screens.OrdersScreen
+import com.prashantpizza.nofsdotaca.ui.screens.OrderDetailScreen
+import com.prashantpizza.nofsdotaca.ui.screens.POSScreen
+import com.prashantpizza.nofsdotaca.ui.screens.PaymentsScreen
+import com.prashantpizza.nofsdotaca.ui.screens.ProfileScreen
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import com.google.firebase.messaging.FirebaseMessaging
 import com.prashantpizza.nofsdotaca.model.OrderNotification
 import com.prashantpizza.nofsdotaca.notification.NotificationHelper
+import com.prashantpizza.nofsdotaca.repository.FcmTokenRepository
 import com.prashantpizza.nofsdotaca.repository.OrderRepository
+import com.prashantpizza.nofsdotaca.ui.LoginScreen
 import com.prashantpizza.nofsdotaca.ui.OrderDialog
+import com.prashantpizza.nofsdotaca.ui.screens.PermissionsScreen
 import com.prashantpizza.nofsdotaca.ui.theme.NewOrderFullScreenDisplayOverTheAppsCardAppTheme
+import com.prashantpizza.nofsdotaca.utils.TokenManager
 import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
@@ -49,12 +62,18 @@ class MainActivity : ComponentActivity() {
         private const val TAG = "MainActivity"
     }
     
-    private val repository = OrderRepository.getInstance()
+    private lateinit var repository: OrderRepository
+    private lateinit var fcmTokenRepository: FcmTokenRepository
+    private lateinit var tokenManager: TokenManager
+    private var isAuthenticated by mutableStateOf(false)
     private var currentOrder by mutableStateOf<OrderNotification?>(null)
     private var showOrderDialog by mutableStateOf(false)
     private var fcmToken by mutableStateOf<String?>(null)
     private var isBatteryOptimized by mutableStateOf(true)
     private var hasOverlayPermission by mutableStateOf(false)
+    private var hasNotificationPermission by mutableStateOf(false)
+    private var showPermissionsScreen by mutableStateOf(false)
+    private var pendingOrderId by mutableStateOf<String?>(null) // Order ID from intent
     
     // Media player and vibrator for foreground notifications
     private var mediaPlayer: MediaPlayer? = null
@@ -66,12 +85,21 @@ class MainActivity : ComponentActivity() {
         ActivityResultContracts.StartActivityForResult()
     ) {
         checkOverlayPermission()
+        // Update permissions screen state if needed
+        if (isAuthenticated) {
+            val allPermissionsGranted = !isBatteryOptimized && hasOverlayPermission && hasNotificationPermission
+            if (allPermissionsGranted && showPermissionsScreen) {
+                // Auto-advance if all permissions are now granted
+                showPermissionsScreen = false
+            }
+        }
     }
     
     // Notification permission launcher
     private val notificationPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestPermission()
     ) { isGranted ->
+        hasNotificationPermission = isGranted
         if (isGranted) {
             Log.d(TAG, "Notification permission granted")
             Toast.makeText(this, "Notification permission granted", Toast.LENGTH_SHORT).show()
@@ -79,6 +107,14 @@ class MainActivity : ComponentActivity() {
         } else {
             Log.w(TAG, "Notification permission denied")
             Toast.makeText(this, "Notification permission denied", Toast.LENGTH_SHORT).show()
+        }
+        // Update permissions screen state if needed
+        if (isAuthenticated) {
+            val allPermissionsGranted = !isBatteryOptimized && hasOverlayPermission && hasNotificationPermission
+            if (allPermissionsGranted && showPermissionsScreen) {
+                // Auto-advance if all permissions are now granted
+                showPermissionsScreen = false
+            }
         }
     }
     
@@ -113,48 +149,146 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         
-        // Check battery optimization status
-        checkBatteryOptimization()
+        // Initialize TokenManager and Repositories
+        tokenManager = TokenManager.getInstance(this)
+        repository = OrderRepository.getInstance(this)
+        fcmTokenRepository = FcmTokenRepository.getInstance(this)
         
-        // Check overlay permission
-        checkOverlayPermission()
+        // Check authentication state
+        isAuthenticated = tokenManager.isAuthenticated()
         
-        // Request notification permission
-        requestNotificationPermission()
+        // Handle intent from OrderNotificationActivity (View Details button)
+        handleViewOrderDetailsIntent(intent)
         
-        // Get FCM token
-        getFCMToken()
-        
-        // Register broadcast receiver
-        LocalBroadcastManager.getInstance(this).registerReceiver(
-            orderReceiver,
-            IntentFilter("com.prashantpizza.nofsdotaca.NEW_ORDER")
-        )
+        // Only initialize app features if authenticated
+        if (isAuthenticated) {
+            // Check all permissions
+            checkBatteryOptimization()
+            checkOverlayPermission()
+            checkNotificationPermission()
+            
+            // Check if permissions screen should be shown
+            val allPermissionsGranted = !isBatteryOptimized && hasOverlayPermission && hasNotificationPermission
+            showPermissionsScreen = !allPermissionsGranted
+            
+            // Initialize app features
+            getFCMToken()
+            
+            // Register broadcast receiver
+            LocalBroadcastManager.getInstance(this).registerReceiver(
+                orderReceiver,
+                IntentFilter("com.prashantpizza.nofsdotaca.NEW_ORDER")
+            )
+        }
         
         setContent {
             NewOrderFullScreenDisplayOverTheAppsCardAppTheme {
-                MainScreen(
-                    fcmToken = fcmToken,
-                    isBatteryOptimized = isBatteryOptimized,
-                    hasOverlayPermission = hasOverlayPermission,
-                    onTestNotification = { testNotification() },
-                    onRequestPermissions = { requestNotificationPermission() },
-                    onDisableBatteryOptimization = { requestBatteryOptimizationExemption() },
-                    onEnableFullScreen = { checkFullScreenIntentPermission() },
-                    onRequestOverlayPermission = { requestOverlayPermission() }
-                )
-                
-                // Show order dialog when notification received in foreground
-                if (showOrderDialog && currentOrder != null) {
-                    OrderDialog(
-                        order = currentOrder!!,
-                        onAccept = { handleAccept(currentOrder!!) },
-                        onReject = { handleReject(currentOrder!!) },
-                        onDismiss = { 
-                            stopRingtoneAndVibration()
-                            showOrderDialog = false 
+                when {
+                    !isAuthenticated -> {
+                        LoginScreen(
+                            onLoginSuccess = {
+                                // User logged in successfully
+                                isAuthenticated = true
+                                // Check all permissions
+                                checkBatteryOptimization()
+                                checkOverlayPermission()
+                                checkNotificationPermission()
+                                
+                                // Check if permissions screen should be shown
+                                val allPermissionsGranted = !isBatteryOptimized && hasOverlayPermission && hasNotificationPermission
+                                showPermissionsScreen = !allPermissionsGranted
+                                
+                                // Initialize app features
+                                getFCMToken()
+                                // Register broadcast receiver
+                                LocalBroadcastManager.getInstance(this@MainActivity).registerReceiver(
+                                    orderReceiver,
+                                    IntentFilter("com.prashantpizza.nofsdotaca.NEW_ORDER")
+                                )
+                            },
+                            tokenManager = tokenManager
+                        )
+                    }
+                    showPermissionsScreen -> {
+                        PermissionsScreen(
+                            isBatteryOptimized = isBatteryOptimized,
+                            hasOverlayPermission = hasOverlayPermission,
+                            hasNotificationPermission = hasNotificationPermission,
+                            onRequestNotificationPermission = {
+                                requestNotificationPermission()
+                            },
+                            onDisableBatteryOptimization = {
+                                requestBatteryOptimizationExemption()
+                            },
+                            onRequestOverlayPermission = {
+                                requestOverlayPermission()
+                            },
+                            onEnableFullScreen = {
+                                checkFullScreenIntentPermission()
+                            },
+                            onContinue = {
+                                // Check permissions again before continuing
+                                checkBatteryOptimization()
+                                checkOverlayPermission()
+                                checkNotificationPermission()
+                                showPermissionsScreen = false
+                            }
+                        )
+                    }
+                    else -> {
+                        // Get pending order ID and clear it
+                        val orderIdToView = pendingOrderId
+                        if (orderIdToView != null) {
+                            pendingOrderId = null // Clear after reading
                         }
-                    )
+                        
+                        MainScreen(
+                            fcmToken = fcmToken,
+                            isBatteryOptimized = isBatteryOptimized,
+                            hasOverlayPermission = hasOverlayPermission,
+                            initialOrderId = orderIdToView, // Pass pending order ID
+                            onTestNotification = { testNotification() },
+                            onRequestPermissions = { requestNotificationPermission() },
+                            onDisableBatteryOptimization = { requestBatteryOptimizationExemption() },
+                            onEnableFullScreen = { checkFullScreenIntentPermission() },
+                            onRequestOverlayPermission = { requestOverlayPermission() },
+                            onLogout = {
+                                // Remove FCM token from backend before logout
+                                lifecycleScope.launch {
+                                    fcmTokenRepository.removeToken().onFailure {
+                                        Log.w(TAG, "Failed to remove FCM token on logout: ${it.message}")
+                                    }
+                                }
+                                // Clear tokens and logout
+                                tokenManager.clearTokens()
+                                isAuthenticated = false
+                                showPermissionsScreen = false
+                                // Unregister receiver
+                                try {
+                                    LocalBroadcastManager.getInstance(this@MainActivity)
+                                        .unregisterReceiver(orderReceiver)
+                                } catch (e: Exception) {
+                                    Log.e(TAG, "Error unregistering receiver", e)
+                                }
+                            }
+                        )
+                        
+                        // Show order dialog when notification received in foreground
+                        if (showOrderDialog && currentOrder != null) {
+                            OrderDialog(
+                                order = currentOrder!!,
+                                onDismiss = { 
+                                    stopRingtoneAndVibration()
+                                    showOrderDialog = false 
+                                },
+                                onViewDetails = { 
+                                    handleViewDetailsFromDialog(currentOrder!!)
+                                    stopRingtoneAndVibration()
+                                    showOrderDialog = false 
+                                }
+                            )
+                        }
+                    }
                 }
             }
         }
@@ -168,10 +302,24 @@ class MainActivity : ComponentActivity() {
     
     override fun onResume() {
         super.onResume()
-        // Recheck battery optimization when returning to app
-        checkBatteryOptimization()
-        // Recheck overlay permission
-        checkOverlayPermission()
+        if (isAuthenticated) {
+            // Recheck all permissions when returning to app
+            checkBatteryOptimization()
+            checkOverlayPermission()
+            checkNotificationPermission()
+        }
+    }
+    
+    private fun checkNotificationPermission() {
+        hasNotificationPermission = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            ContextCompat.checkSelfPermission(
+                this,
+                Manifest.permission.POST_NOTIFICATIONS
+            ) == PackageManager.PERMISSION_GRANTED
+        } else {
+            true // Permission is granted by default on Android < 13
+        }
+        Log.d(TAG, "Notification permission: $hasNotificationPermission")
     }
     
     private fun checkOverlayPermission() {
@@ -208,6 +356,7 @@ class MainActivity : ComponentActivity() {
                     this,
                     Manifest.permission.POST_NOTIFICATIONS
                 ) == PackageManager.PERMISSION_GRANTED -> {
+                    hasNotificationPermission = true
                     Log.d(TAG, "Notification permission already granted")
                     checkFullScreenIntentPermission()
                 }
@@ -216,6 +365,7 @@ class MainActivity : ComponentActivity() {
                 }
             }
         } else {
+            hasNotificationPermission = true
             checkFullScreenIntentPermission()
         }
     }
@@ -338,6 +488,17 @@ class MainActivity : ComponentActivity() {
             val token = task.result
             fcmToken = token
             Log.d(TAG, "FCM Token: $token")
+            
+            // Save FCM token to backend if user is authenticated
+            if (isAuthenticated && token != null) {
+                lifecycleScope.launch {
+                    fcmTokenRepository.saveToken(token, "android").onSuccess {
+                        Log.d(TAG, "FCM token saved to backend successfully")
+                    }.onFailure {
+                        Log.e(TAG, "Failed to save FCM token to backend: ${it.message}")
+                    }
+                }
+            }
         }
     }
     
@@ -463,33 +624,219 @@ class MainActivity : ComponentActivity() {
         Log.d(TAG, "Ringtone and vibration cleanup complete")
     }
     
-    private fun handleAccept(order: OrderNotification) {
-        stopRingtoneAndVibration()
-        lifecycleScope.launch {
-            val result = repository.acceptOrder(order)
-            result.onSuccess {
-                Toast.makeText(this@MainActivity, "Order accepted", Toast.LENGTH_SHORT).show()
-            }.onFailure {
-                Toast.makeText(this@MainActivity, "Failed to accept order", Toast.LENGTH_SHORT).show()
+    private fun handleViewDetailsFromDialog(order: OrderNotification) {
+        Log.d(TAG, "View details for order from dialog: ${order.orderId}")
+        // Use MongoDB ObjectId if available, otherwise use orderNumber
+        val orderIdToUse = order.orderMongoId ?: order.orderId
+        Log.d(TAG, "Using order ID for navigation: $orderIdToUse (MongoDB ID: ${order.orderMongoId != null})")
+        // Set pending order ID to trigger navigation in MainScreen
+        pendingOrderId = orderIdToUse
+    }
+    
+    private fun handleViewOrderDetailsIntent(intent: Intent?) {
+        val action = intent?.getStringExtra("action")
+        val orderId = intent?.getStringExtra("orderId")
+        
+        if (action == "view_order_details" && orderId != null) {
+            Log.d(TAG, "Received view order details intent for order: $orderId")
+            // Set pending order ID to trigger navigation in MainScreen
+            pendingOrderId = orderId
+        }
+    }
+}
+
+sealed class TabItem(val title: String, val icon: androidx.compose.ui.graphics.vector.ImageVector) {
+    object Orders : TabItem("Orders", Icons.Default.ListAlt)
+    object POS : TabItem("POS", Icons.Default.PointOfSale)
+    object Payments : TabItem("Payments", Icons.Default.Payment)
+    object Profile : TabItem("Profile", Icons.Default.Person)
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun MainScreen(
+    fcmToken: String?,
+    isBatteryOptimized: Boolean,
+    hasOverlayPermission: Boolean,
+    initialOrderId: String? = null, // Order ID from intent or dialog
+    onTestNotification: () -> Unit,
+    onRequestPermissions: () -> Unit,
+    onDisableBatteryOptimization: () -> Unit,
+    onEnableFullScreen: () -> Unit,
+    onRequestOverlayPermission: () -> Unit,
+    onLogout: () -> Unit
+) {
+    var selectedTab by remember { mutableStateOf<TabItem>(TabItem.Orders) }
+    var selectedOrderId by remember { mutableStateOf<String?>(initialOrderId) }
+    
+    // Clear initialOrderId after using it
+    LaunchedEffect(initialOrderId) {
+        if (initialOrderId != null) {
+            selectedOrderId = initialOrderId
+        }
+    }
+    
+    Scaffold(
+        modifier = Modifier.fillMaxSize(),
+        topBar = {
+            TopAppBar(
+                title = {
+                    Text(
+                        text = if (selectedOrderId != null) "Order Details" else selectedTab.title,
+                        fontWeight = FontWeight.Bold
+                    )
+                },
+                navigationIcon = {
+                    if (selectedOrderId != null) {
+                        IconButton(onClick = { selectedOrderId = null }) {
+                            Icon(
+                                imageVector = Icons.Default.ArrowBack,
+                                contentDescription = "Back"
+                            )
+                        }
+                    }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.primaryContainer,
+                    titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                )
+            )
+        },
+        bottomBar = {
+            NavigationBar {
+                NavigationBarItem(
+                    icon = { 
+                        TabIcon(
+                            icon = TabItem.Orders.icon,
+                            isSelected = selectedTab == TabItem.Orders,
+                            selectedColor = Color(0xFF2196F3), // Blue
+                            unselectedColor = Color(0xFF757575) // Gray
+                        )
+                    },
+                    label = { Text(TabItem.Orders.title) },
+                    selected = selectedTab == TabItem.Orders,
+                    onClick = { selectedTab = TabItem.Orders }
+                )
+                NavigationBarItem(
+                    icon = { 
+                        TabIcon(
+                            icon = TabItem.POS.icon,
+                            isSelected = selectedTab == TabItem.POS,
+                            selectedColor = Color(0xFF4CAF50), // Green
+                            unselectedColor = Color(0xFF757575) // Gray
+                        )
+                    },
+                    label = { Text(TabItem.POS.title) },
+                    selected = selectedTab == TabItem.POS,
+                    onClick = { selectedTab = TabItem.POS }
+                )
+                NavigationBarItem(
+                    icon = { 
+                        TabIcon(
+                            icon = TabItem.Payments.icon,
+                            isSelected = selectedTab == TabItem.Payments,
+                            selectedColor = Color(0xFFFF9800), // Orange
+                            unselectedColor = Color(0xFF757575) // Gray
+                        )
+                    },
+                    label = { Text(TabItem.Payments.title) },
+                    selected = selectedTab == TabItem.Payments,
+                    onClick = { selectedTab = TabItem.Payments }
+                )
+                NavigationBarItem(
+                    icon = { 
+                        TabIcon(
+                            icon = TabItem.Profile.icon,
+                            isSelected = selectedTab == TabItem.Profile,
+                            selectedColor = Color(0xFF9C27B0), // Purple
+                            unselectedColor = Color(0xFF757575) // Gray
+                        )
+                    },
+                    label = { Text(TabItem.Profile.title) },
+                    selected = selectedTab == TabItem.Profile,
+                    onClick = { selectedTab = TabItem.Profile }
+                )
+            }
+        }
+    ) { innerPadding ->
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(innerPadding)
+        ) {
+            when {
+                selectedOrderId != null -> {
+                    // Show order detail screen
+                    OrderDetailScreen(
+                        orderId = selectedOrderId!!,
+                        onBack = { selectedOrderId = null }
+                    )
+                }
+                selectedTab == TabItem.Orders -> {
+                    OrdersScreen(
+                        onOrderClick = { orderId ->
+                            selectedOrderId = orderId
+                        }
+                    )
+                }
+                selectedTab == TabItem.POS -> POSScreen()
+                selectedTab == TabItem.Payments -> PaymentsScreen()
+                selectedTab == TabItem.Profile -> ProfileScreen(
+                    onLogout = onLogout
+                )
             }
         }
     }
     
-    private fun handleReject(order: OrderNotification) {
-        stopRingtoneAndVibration()
-        lifecycleScope.launch {
-            val result = repository.rejectOrder(order)
-            result.onSuccess {
-                Toast.makeText(this@MainActivity, "Order rejected", Toast.LENGTH_SHORT).show()
-            }.onFailure {
-                Toast.makeText(this@MainActivity, "Failed to reject order", Toast.LENGTH_SHORT).show()
+    // Keep the old settings screen accessible via a separate flow if needed
+    // For now, we'll keep the notification settings in a separate composable
+    // that can be accessed from Profile screen later
+}
+
+@Composable
+fun TabIcon(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    isSelected: Boolean,
+    selectedColor: Color,
+    unselectedColor: Color
+) {
+    Box(
+        modifier = Modifier.size(40.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        if (isSelected) {
+            // Active state: colorful background with icon
+            Surface(
+                shape = MaterialTheme.shapes.small,
+                color = selectedColor.copy(alpha = 0.2f), // Light background color
+                modifier = Modifier.size(40.dp)
+            ) {
+                Box(
+                    contentAlignment = Alignment.Center,
+                    modifier = Modifier.fillMaxSize()
+                ) {
+                    Icon(
+                        imageVector = icon,
+                        contentDescription = null,
+                        tint = selectedColor, // Bright icon color
+                        modifier = Modifier.size(24.dp)
+                    )
+                }
             }
+        } else {
+            // Inactive state: gray icon
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = unselectedColor,
+                modifier = Modifier.size(24.dp)
+            )
         }
     }
 }
 
 @Composable
-fun MainScreen(
+fun SettingsScreen(
     fcmToken: String?,
     isBatteryOptimized: Boolean,
     hasOverlayPermission: Boolean,
@@ -499,284 +846,27 @@ fun MainScreen(
     onEnableFullScreen: () -> Unit,
     onRequestOverlayPermission: () -> Unit
 ) {
-    Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding)
-                .padding(24.dp)
-                .verticalScroll(rememberScrollState()),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(16.dp)
-        ) {
-            Spacer(modifier = Modifier.height(32.dp))
-            
-            Text(
-                text = "Order Notification System",
-                fontSize = 24.sp,
-                fontWeight = FontWeight.Bold
-            )
-            
-            Spacer(modifier = Modifier.height(16.dp))
-            
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.primaryContainer
-                )
-            ) {
-                Column(
-                    modifier = Modifier.padding(16.dp)
-                ) {
-                    Text(
-                        text = "FCM Token",
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 16.sp
-                    )
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Text(
-                        text = fcmToken ?: "Loading...",
-                        fontSize = 12.sp,
-                        lineHeight = 16.sp
-                    )
-                }
-            }
-            
-            Spacer(modifier = Modifier.height(16.dp))
-            
-            // Overlay Permission Warning (CRITICAL for automatic full-screen)
-            if (!hasOverlayPermission) {
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.errorContainer
-                    )
-                ) {
-                    Column(
-                        modifier = Modifier.padding(16.dp)
-                    ) {
-                        Text(
-                            text = "🚨 Display Over Other Apps - REQUIRED",
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 16.sp,
-                            color = MaterialTheme.colorScheme.onErrorContainer
-                        )
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Text(
-                            text = "This permission is ESSENTIAL for automatic full-screen notifications (like Swiggy/Zomato/Uber). Without it, you must tap the notification to see orders.",
-                            fontSize = 14.sp,
-                            lineHeight = 20.sp,
-                            color = MaterialTheme.colorScheme.onErrorContainer
-                        )
-                        Spacer(modifier = Modifier.height(12.dp))
-                        Button(
-                            onClick = onRequestOverlayPermission,
-                            modifier = Modifier.fillMaxWidth(),
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = MaterialTheme.colorScheme.error
-                            )
-                        ) {
-                            Text("Enable Display Over Other Apps")
-                        }
-                    }
-                }
-                Spacer(modifier = Modifier.height(16.dp))
-            } else {
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.primaryContainer
-                    )
-                ) {
-                    Row(
-                        modifier = Modifier.padding(16.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            text = "✅",
-                            fontSize = 24.sp,
-                            modifier = Modifier.padding(end = 12.dp)
-                        )
-                        Column {
-                            Text(
-                                text = "Display Over Other Apps Enabled",
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 14.sp
-                            )
-                            Text(
-                                text = "Full-screen notifications will appear automatically",
-                                fontSize = 12.sp,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                    }
-                }
-                Spacer(modifier = Modifier.height(16.dp))
-            }
-            
-            // Battery Optimization Warning
-            if (isBatteryOptimized) {
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.errorContainer
-                    )
-                ) {
-                    Column(
-                        modifier = Modifier.padding(16.dp)
-                    ) {
-                        Text(
-                            text = "⚠️ Battery Optimization Enabled",
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 16.sp,
-                            color = MaterialTheme.colorScheme.onErrorContainer
-                        )
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Text(
-                            text = "Notifications may be delayed or missed when app is in background. Disable battery optimization for reliable notifications.",
-                            fontSize = 14.sp,
-                            lineHeight = 20.sp,
-                            color = MaterialTheme.colorScheme.onErrorContainer
-                        )
-                        Spacer(modifier = Modifier.height(12.dp))
-                        Button(
-                            onClick = onDisableBatteryOptimization,
-                            modifier = Modifier.fillMaxWidth(),
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = MaterialTheme.colorScheme.error
-                            )
-                        ) {
-                            Text("Disable Battery Optimization")
-                        }
-                    }
-                }
-                Spacer(modifier = Modifier.height(16.dp))
-            } else {
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.primaryContainer
-                    )
-                ) {
-                    Row(
-                        modifier = Modifier.padding(16.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            text = "✅",
-                            fontSize = 24.sp,
-                            modifier = Modifier.padding(end = 12.dp)
-                        )
-                        Text(
-                            text = "Battery optimization disabled - Notifications will work reliably",
-                            fontSize = 14.sp,
-                            color = MaterialTheme.colorScheme.onPrimaryContainer
-                        )
-                    }
-                }
-                Spacer(modifier = Modifier.height(16.dp))
-            }
-            
-            Text(
-                text = "Test Notifications",
-                fontSize = 18.sp,
-                fontWeight = FontWeight.Bold
-            )
-            
-            Button(
-                onClick = onTestNotification,
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Text("Send Test Notification")
-            }
-            
-            Button(
-                onClick = onRequestPermissions,
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Text("Request Notification Permissions")
-            }
-            
-            // Full-screen intent permission button (Android 14+)
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
-                Button(
-                    onClick = onEnableFullScreen,
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.colorScheme.secondary
-                    )
-                ) {
-                    Text("Enable Full-Screen Notifications (Android 14+)")
-                }
-            }
-            
-            Spacer(modifier = Modifier.height(16.dp))
-            
-            Card(
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Column(
-                    modifier = Modifier.padding(16.dp)
-                ) {
-                    Text(
-                        text = "How to Test",
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 16.sp
-                    )
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Text(
-                        text = "1. Copy the FCM token above\n" +
-                                "2. Send a test notification from Firebase Console or your backend\n" +
-                                "3. Or use the 'Send Test Notification' button\n\n" +
-                                "Notification will show:\n" +
-                                "• Full-screen activity when app is in background/killed\n" +
-                                "• Dialog when app is in foreground",
-                        fontSize = 14.sp,
-                        lineHeight = 20.sp
-                    )
-                }
-            }
-            
-            Spacer(modifier = Modifier.height(16.dp))
-            
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.tertiaryContainer
-                )
-            ) {
-                Column(
-                    modifier = Modifier.padding(16.dp)
-                ) {
-                    Text(
-                        text = "FCM Message Format",
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 16.sp
-                    )
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Text(
-                        text = """
-                        {
-                          "to": "YOUR_FCM_TOKEN",
-                          "priority": "high",
-                          "data": {
-                            "type": "new_order",
-                            "title": "New Order",
-                            "body": "You have a new order!",
-                            "orderId": "ORD-12345",
-                            "customerName": "John Doe",
-                            "items": "2x Pizza, 1x Coke",
-                            "amount": "${'$'}25.99",
-                            "address": "123 Main St"
-                          }
-                        }
-                        """.trimIndent(),
-                        fontSize = 11.sp,
-                        fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace,
-                        lineHeight = 14.sp
-                    )
-                }
-            }
-        }
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(24.dp)
+            .verticalScroll(rememberScrollState()),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
+        Spacer(modifier = Modifier.height(32.dp))
+        
+        Text(
+            text = "Order Notification System",
+            fontSize = 24.sp,
+            fontWeight = FontWeight.Bold
+        )
+        
+        // Settings content can be added here if needed
+        Text(
+            text = "Settings",
+            fontSize = 20.sp,
+            fontWeight = FontWeight.Bold
+        )
     }
 }

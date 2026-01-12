@@ -24,9 +24,8 @@ import com.prashantpizza.nofsdotaca.model.OrderNotification
 @Composable
 fun OrderDialog(
     order: OrderNotification,
-    onAccept: () -> Unit,
-    onReject: () -> Unit,
-    onDismiss: () -> Unit
+    onDismiss: () -> Unit,
+    onViewDetails: () -> Unit
 ) {
     Dialog(
         onDismissRequest = onDismiss,
@@ -139,43 +138,40 @@ fun OrderDialog(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    // Reject button
+                    // Dismiss button
                     Button(
-                        onClick = {
-                            onReject()
-                            onDismiss()
-                        },
+                        onClick = onDismiss,
                         modifier = Modifier
                             .weight(1f)
                             .height(50.dp),
                         colors = ButtonDefaults.buttonColors(
-                            containerColor = Color(0xFFE53935)
+                            containerColor = Color(0xFF757575)
                         ),
                         shape = RoundedCornerShape(12.dp)
                     ) {
                         Text(
-                            text = "Reject",
+                            text = "Dismiss",
                             fontSize = 16.sp,
                             fontWeight = FontWeight.Bold
                         )
                     }
                     
-                    // Accept button
+                    // View Details button
                     Button(
                         onClick = {
-                            onAccept()
+                            onViewDetails()
                             onDismiss()
                         },
                         modifier = Modifier
                             .weight(1f)
                             .height(50.dp),
                         colors = ButtonDefaults.buttonColors(
-                            containerColor = Color(0xFF4CAF50)
+                            containerColor = Color(0xFF2196F3)
                         ),
                         shape = RoundedCornerShape(12.dp)
                     ) {
                         Text(
-                            text = "Accept",
+                            text = "View Details",
                             fontSize = 16.sp,
                             fontWeight = FontWeight.Bold
                         )

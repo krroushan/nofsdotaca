@@ -1,9 +1,12 @@
 package com.prashantpizza.nofsdotaca.repository
 
+import android.content.Context
 import android.util.Log
 import com.prashantpizza.nofsdotaca.model.OrderNotification
+import com.prashantpizza.nofsdotaca.utils.TokenManager
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import okhttp3.Interceptor
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
@@ -30,7 +33,7 @@ interface OrderApiService {
     suspend fun updateOrderStatus(@Body request: OrderActionRequest): OrderActionResponse
 }
 
-class OrderRepository {
+class OrderRepository private constructor(context: Context) {
     
     companion object {
         private const val TAG = "OrderRepository"
@@ -39,19 +42,50 @@ class OrderRepository {
         @Volatile
         private var instance: OrderRepository? = null
         
-        fun getInstance(): OrderRepository {
+        fun getInstance(context: Context? = null): OrderRepository {
             return instance ?: synchronized(this) {
-                instance ?: OrderRepository().also { instance = it }
+                if (context == null) {
+                    throw IllegalStateException("Context is required for first initialization")
+                }
+                instance ?: OrderRepository(context.applicationContext).also { instance = it }
             }
         }
     }
+    
+    private val tokenManager: TokenManager = TokenManager.getInstance(context)
     
     private val apiService: OrderApiService by lazy {
         val loggingInterceptor = HttpLoggingInterceptor().apply {
             level = HttpLoggingInterceptor.Level.BODY
         }
         
+        // Auth interceptor to add Authorization header
+        val authInterceptor = Interceptor { chain ->
+            val originalRequest = chain.request()
+            val accessToken = tokenManager.getAccessToken()
+            
+            val newRequest = if (accessToken != null) {
+                originalRequest.newBuilder()
+                    .header("Authorization", "Bearer $accessToken")
+                    .build()
+            } else {
+                originalRequest
+            }
+            
+            val response = chain.proceed(newRequest)
+            
+            // Handle 401 Unauthorized - token expired or invalid
+            if (response.code == 401) {
+                Log.w(TAG, "Received 401 Unauthorized - token may be expired")
+                // Token will be cleared on next login attempt
+                // Could trigger logout flow here if needed
+            }
+            
+            response
+        }
+        
         val client = OkHttpClient.Builder()
+            .addInterceptor(authInterceptor)
             .addInterceptor(loggingInterceptor)
             .connectTimeout(30, TimeUnit.SECONDS)
             .readTimeout(30, TimeUnit.SECONDS)

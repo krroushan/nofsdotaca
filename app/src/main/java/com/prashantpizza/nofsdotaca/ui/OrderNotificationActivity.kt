@@ -1,6 +1,7 @@
 package com.prashantpizza.nofsdotaca.ui
 
 import android.content.Context
+import android.content.Intent
 import android.media.AudioAttributes
 import android.media.Ringtone
 import android.media.RingtoneManager
@@ -49,10 +50,13 @@ class OrderNotificationActivity : ComponentActivity() {
     
     private var ringtone: Ringtone? = null
     private var vibrator: Vibrator? = null
-    private val repository = OrderRepository.getInstance()
+    private lateinit var repository: OrderRepository
     
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        
+        // Initialize repository with context
+        repository = OrderRepository.getInstance(this)
         
         // Show over lockscreen and turn screen on
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
@@ -84,8 +88,8 @@ class OrderNotificationActivity : ComponentActivity() {
             NewOrderFullScreenDisplayOverTheAppsCardAppTheme {
                 OrderNotificationScreen(
                     order = order,
-                    onAccept = { handleAccept(order) },
-                    onReject = { handleReject(order) }
+                    onDismiss = { dismissNotification() },
+                    onViewDetails = { handleViewDetails(order) }
                 )
             }
         }
@@ -158,30 +162,19 @@ class OrderNotificationActivity : ComponentActivity() {
         }
     }
     
-    private fun handleAccept(order: OrderNotification) {
-        Log.d(TAG, "Order accepted: ${order.orderId}")
-        lifecycleScope.launch {
-            val result = repository.acceptOrder(order)
-            result.onSuccess {
-                Log.d(TAG, "Order accepted successfully")
-            }.onFailure {
-                Log.e(TAG, "Failed to accept order", it)
-            }
-            dismissNotification()
+    private fun handleViewDetails(order: OrderNotification) {
+        Log.d(TAG, "View details for order: ${order.orderId}")
+        // Use MongoDB ObjectId if available, otherwise use orderNumber
+        val orderIdToUse = order.orderMongoId ?: order.orderId
+        Log.d(TAG, "Using order ID for navigation: $orderIdToUse (MongoDB ID: ${order.orderMongoId != null})")
+        // Navigate to MainActivity with orderId
+        val intent = Intent(this, com.prashantpizza.nofsdotaca.MainActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+            putExtra("orderId", orderIdToUse)
+            putExtra("action", "view_order_details")
         }
-    }
-    
-    private fun handleReject(order: OrderNotification) {
-        Log.d(TAG, "Order rejected: ${order.orderId}")
-        lifecycleScope.launch {
-            val result = repository.rejectOrder(order)
-            result.onSuccess {
-                Log.d(TAG, "Order rejected successfully")
-            }.onFailure {
-                Log.e(TAG, "Failed to reject order", it)
-            }
-            dismissNotification()
-        }
+        startActivity(intent)
+        dismissNotification()
     }
     
     private fun dismissNotification() {
@@ -199,8 +192,8 @@ class OrderNotificationActivity : ComponentActivity() {
 @Composable
 fun OrderNotificationScreen(
     order: OrderNotification,
-    onAccept: () -> Unit,
-    onReject: () -> Unit
+    onDismiss: () -> Unit,
+    onViewDetails: () -> Unit
 ) {
     // Black transparent overlay background
     Box(
@@ -296,37 +289,37 @@ fun OrderNotificationScreen(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    // Reject button
+                    // Dismiss button
                     Button(
-                        onClick = onReject,
+                        onClick = onDismiss,
                         modifier = Modifier
                             .weight(1f)
                             .height(50.dp),
                         colors = ButtonDefaults.buttonColors(
-                            containerColor = Color(0xFFE53935)
+                            containerColor = Color(0xFF757575)
                         ),
                         shape = RoundedCornerShape(12.dp)
                     ) {
                         Text(
-                            text = "Reject",
+                            text = "Dismiss",
                             fontSize = 16.sp,
                             fontWeight = FontWeight.Bold
-                    )
-                }
+                        )
+                    }
                     
-                    // Accept button
+                    // View Details button
                     Button(
-                        onClick = onAccept,
+                        onClick = onViewDetails,
                         modifier = Modifier
                             .weight(1f)
                             .height(50.dp),
                         colors = ButtonDefaults.buttonColors(
-                            containerColor = Color(0xFF4CAF50)
+                            containerColor = Color(0xFF2196F3)
                         ),
                         shape = RoundedCornerShape(12.dp)
                     ) {
                         Text(
-                            text = "Accept",
+                            text = "View Details",
                             fontSize = 16.sp,
                             fontWeight = FontWeight.Bold
                         )
