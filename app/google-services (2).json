@@ -1,0 +1,178 @@
+{
+  "project_info": {
+    "project_number": "189156123308",
+    "project_id": "prashant-pizza-llp",
+    "storage_bucket": "prashant-pizza-llp.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:189156123308:android:b038604e59fd40b112f509",
+        "android_client_info": {
+          "package_name": "com.prashantpizza.delivery"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "189156123308-ddr6iiupfld3vg702iamb92lv46oiai6.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBnlTURt7KYUaWjXO0WmGUc_bXecpJD5xk"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "189156123308-ddr6iiupfld3vg702iamb92lv46oiai6.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "189156123308-f0ijolhbudqckik5c3ikprq2t9dsaapk.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.prashantpizza.user.ios"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:189156123308:android:1047bb77dcab449912f509",
+        "android_client_info": {
+          "package_name": "com.prashantpizza.nofsdotaca"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "189156123308-6dqies5hi4n2abkfn6t3bth2vgm7ot20.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.prashantpizza.nofsdotaca",
+            "certificate_hash": "0812d0950df570b41e967806ddd3fddb4c0dc028"
+          }
+        },
+        {
+          "client_id": "189156123308-ddr6iiupfld3vg702iamb92lv46oiai6.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBnlTURt7KYUaWjXO0WmGUc_bXecpJD5xk"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "189156123308-ddr6iiupfld3vg702iamb92lv46oiai6.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "189156123308-f0ijolhbudqckik5c3ikprq2t9dsaapk.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.prashantpizza.user.ios"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:189156123308:android:a57b42ed0b70d6d912f509",
+        "android_client_info": {
+          "package_name": "com.prashantpizza.restaurantapp"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "189156123308-hmkpp0aih3di4n91i8gf1t7op5eb4e6a.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.prashantpizza.restaurantapp",
+            "certificate_hash": "0812d0950df570b41e967806ddd3fddb4c0dc028"
+          }
+        },
+        {
+          "client_id": "189156123308-ddr6iiupfld3vg702iamb92lv46oiai6.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBnlTURt7KYUaWjXO0WmGUc_bXecpJD5xk"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "189156123308-ddr6iiupfld3vg702iamb92lv46oiai6.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "189156123308-f0ijolhbudqckik5c3ikprq2t9dsaapk.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.prashantpizza.user.ios"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:189156123308:android:0ab549c0b172442e12f509",
+        "android_client_info": {
+          "package_name": "com.prashantpizza.user"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "189156123308-q4s3hm6gflpk0gff56o8rqgon8lu88mg.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.prashantpizza.user",
+            "certificate_hash": "0812d0950df570b41e967806ddd3fddb4c0dc028"
+          }
+        },
+        {
+          "client_id": "189156123308-ddr6iiupfld3vg702iamb92lv46oiai6.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBnlTURt7KYUaWjXO0WmGUc_bXecpJD5xk"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "189156123308-ddr6iiupfld3vg702iamb92lv46oiai6.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "189156123308-f0ijolhbudqckik5c3ikprq2t9dsaapk.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.prashantpizza.user.ios"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
