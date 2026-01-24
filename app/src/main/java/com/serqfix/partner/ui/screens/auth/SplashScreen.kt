@@ -52,7 +52,7 @@ suspend fun checkLoginStatus(
 ) {
     try {
         // Check if permissions have been granted
-        val permissionsCompleted = userPreferences.userData.first() != null // Simplified check
+        val permissionsCompleted = userPreferences.permissionsCompleted.first()
         
         if (permissionsCompleted) {
             // Check login status

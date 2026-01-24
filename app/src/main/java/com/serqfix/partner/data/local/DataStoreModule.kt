@@ -20,6 +20,7 @@ object DataStoreKeys {
     val AVAILABLE = booleanPreferencesKey("available")
     val USER_ID = stringPreferencesKey("user_id")
     val FCM_TOKEN = stringPreferencesKey("fcm_token")
+    val PERMISSIONS_COMPLETED = booleanPreferencesKey("permissions_completed")
 }
 
 class UserPreferencesDataStore(private val context: Context) {
@@ -91,7 +92,17 @@ class UserPreferencesDataStore(private val context: Context) {
     val fcmToken: Flow<String?> = dataStore.data.map { preferences ->
         preferences[DataStoreKeys.FCM_TOKEN]
     }
-    
+
+    suspend fun setPermissionsCompleted(value: Boolean) {
+        dataStore.edit { preferences ->
+            preferences[DataStoreKeys.PERMISSIONS_COMPLETED] = value
+        }
+    }
+
+    val permissionsCompleted: Flow<Boolean> = dataStore.data.map { preferences ->
+        preferences[DataStoreKeys.PERMISSIONS_COMPLETED] ?: false
+    }
+
     suspend fun clearAll() {
         dataStore.edit { preferences ->
             preferences.clear()

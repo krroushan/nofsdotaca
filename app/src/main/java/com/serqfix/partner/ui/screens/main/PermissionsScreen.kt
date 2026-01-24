@@ -2,6 +2,8 @@ package com.serqfix.partner.ui.screens.main
 
 import android.Manifest
 import android.content.pm.PackageManager
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -15,15 +17,19 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.navigation.NavController
+import com.serqfix.partner.data.local.UserPreferencesDataStore
+import com.serqfix.partner.ui.navigation.NavRoute
 import com.serqfix.partner.ui.theme.PartnerAppTheme
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PermissionsScreen(
-    navController: NavController
+    navController: NavController,
+    userPreferences: UserPreferencesDataStore
 ) {
     val context = LocalContext.current
-    
+
     var locationPermission by remember {
         mutableStateOf(
             ContextCompat.checkSelfPermission(
@@ -32,7 +38,7 @@ fun PermissionsScreen(
             ) == PackageManager.PERMISSION_GRANTED
         )
     }
-    
+
     var notificationPermission by remember {
         mutableStateOf(
             ContextCompat.checkSelfPermission(
@@ -41,6 +47,22 @@ fun PermissionsScreen(
             ) == PackageManager.PERMISSION_GRANTED
         )
     }
+
+    // Permission launchers
+    val locationPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestMultiplePermissions()
+    ) { permissions ->
+        locationPermission = permissions[Manifest.permission.ACCESS_FINE_LOCATION] == true ||
+                           permissions[Manifest.permission.ACCESS_COARSE_LOCATION] == true
+    }
+
+    val notificationPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { isGranted ->
+        notificationPermission = isGranted
+    }
+
+    val scope = rememberCoroutineScope()
     
     PartnerAppTheme {
         Scaffold(
@@ -83,10 +105,15 @@ fun PermissionsScreen(
                     icon = Icons.Default.LocationOn,
                     isGranted = locationPermission,
                     onRequest = {
-                        // TODO: Request location permission
+                        locationPermissionLauncher.launch(
+                            arrayOf(
+                                Manifest.permission.ACCESS_FINE_LOCATION,
+                                Manifest.permission.ACCESS_COARSE_LOCATION
+                            )
+                        )
                     }
                 )
-                
+
                 // Notification Permission
                 PermissionCard(
                     title = "Notification Permission",
@@ -94,22 +121,29 @@ fun PermissionsScreen(
                     icon = Icons.Default.Notifications,
                     isGranted = notificationPermission,
                     onRequest = {
-                        // TODO: Request notification permission
+                        notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
                     }
                 )
                 
                 Spacer(modifier = Modifier.weight(1f))
-                
-                Button(
-                    onClick = {
-                        // TODO: Navigate to next screen or main app
-                        navController.popBackStack()
-                    },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(56.dp)
-                ) {
-                    Text("Continue")
+
+                // Show continue button only when both permissions are granted
+                if (locationPermission && notificationPermission) {
+                    Button(
+                        onClick = {
+                            // Mark permissions as completed and navigate back
+                            // Navigation based on auth status will be handled by splash screen
+                            scope.launch {
+                                userPreferences.setPermissionsCompleted(true)
+                            }
+                            navController.popBackStack()
+                        },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(56.dp)
+                    ) {
+                        Text("Continue")
+                    }
                 }
             }
         }

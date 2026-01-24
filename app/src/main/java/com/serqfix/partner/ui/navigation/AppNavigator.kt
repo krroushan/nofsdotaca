@@ -224,7 +224,7 @@ fun AppNavigator(
         }
         
         composable(NavRoute.Permissions.route) {
-            PermissionsScreen(navController = navController)
+            PermissionsScreen(navController = navController, userPreferences = userPreferences)
         }
         
         composable(NavRoute.ProfilePictureVerification.route) {
