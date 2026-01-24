@@ -1,5 +1,6 @@
 <resources>
-    <string name="app_name">New Order Full Screen Display Over The apps Card app</string>
+    <string name="app_name">SerQfix Partner</string>
+    <string name="google_maps_api_key">AIzaSyB9nGJrOMIVsV_GkIYGwZMbpeRpOcRLOxQ</string>
     
     <!-- Notification strings -->
     <string name="notification_channel_name">Order Notifications</string>

@@ -14,9 +14,14 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SHORT_SERVICE" />
     <!-- System Alert Window - Required for overlay like Swiggy/Zomato/Uber -->
     <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
+    
+    <!-- Location Permissions for Google Maps -->
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION" />
 
     <application
-        android:name=".OrderApplication"
+        android:name=".PartnerApplication"
         android:allowBackup="true"
         android:dataExtractionRules="@xml/data_extraction_rules"
         android:fullBackupContent="@xml/backup_rules"
@@ -24,14 +29,14 @@
         android:label="@string/app_name"
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
-        android:theme="@style/Theme.NewOrderFullScreenDisplayOverTheAppsCardApp">
+        android:theme="@style/Theme.PartnerApp">
         
         <!-- Main Activity -->
         <activity
             android:name=".MainActivity"
             android:exported="true"
             android:label="@string/app_name"
-            android:theme="@style/Theme.NewOrderFullScreenDisplayOverTheAppsCardApp">
+            android:theme="@style/Theme.PartnerApp">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
@@ -46,7 +51,7 @@
             android:launchMode="singleTask"
             android:showWhenLocked="true"
             android:taskAffinity=""
-            android:theme="@style/Theme.NewOrderFullScreenDisplayOverTheAppsCardApp"
+            android:theme="@style/Theme.PartnerApp"
             android:turnScreenOn="true" />
         
         <!-- Firebase Messaging Service -->
@@ -64,6 +69,12 @@
             android:exported="false"
             android:foregroundServiceType="shortService" />
         
+        <!-- Location Tracking Foreground Service -->
+        <service
+            android:name=".service.LocationTrackingService"
+            android:exported="false"
+            android:foregroundServiceType="location" />
+        
         <!-- Firebase Messaging default notification icon -->
         <meta-data
             android:name="com.google.firebase.messaging.default_notification_icon"
@@ -78,6 +89,11 @@
         <meta-data
             android:name="com.google.firebase.messaging.default_notification_channel_id"
             android:value="order_notifications" />
+        
+        <!-- Google Maps API Key -->
+        <meta-data
+            android:name="com.google.android.geo.API_KEY"
+            android:value="@string/google_maps_api_key" />
     </application>
 
 </manifest>
