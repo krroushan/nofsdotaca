@@ -3,6 +3,7 @@ package com.prashantpizza.nofsdotaca.repository
 import android.content.Context
 import android.util.Log
 import com.prashantpizza.nofsdotaca.utils.TokenManager
+import com.prashantpizza.nofsdotaca.utils.AuthErrorHandler
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.Interceptor
@@ -117,6 +118,7 @@ class PaymentsRepository private constructor(context: Context) {
     }
     
     private val tokenManager: TokenManager = TokenManager.getInstance(context)
+    private val authErrorHandler: AuthErrorHandler = AuthErrorHandler.getInstance(context)
     
     private val apiService: PaymentsApiService by lazy {
         val loggingInterceptor = HttpLoggingInterceptor().apply {
@@ -140,7 +142,8 @@ class PaymentsRepository private constructor(context: Context) {
             
             // Handle 401 Unauthorized - token expired or invalid
             if (response.code == 401) {
-                Log.w(TAG, "Received 401 Unauthorized - token may be expired")
+                Log.w(TAG, "Received 401 Unauthorized - token expired or invalid")
+                authErrorHandler.handleAuthError()
             }
             
             response

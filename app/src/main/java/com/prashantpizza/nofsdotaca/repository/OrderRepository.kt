@@ -4,6 +4,7 @@ import android.content.Context
 import android.util.Log
 import com.prashantpizza.nofsdotaca.model.OrderNotification
 import com.prashantpizza.nofsdotaca.utils.TokenManager
+import com.prashantpizza.nofsdotaca.utils.AuthErrorHandler
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.Interceptor
@@ -53,6 +54,7 @@ class OrderRepository private constructor(context: Context) {
     }
     
     private val tokenManager: TokenManager = TokenManager.getInstance(context)
+    private val authErrorHandler: AuthErrorHandler = AuthErrorHandler.getInstance(context)
     
     private val apiService: OrderApiService by lazy {
         val loggingInterceptor = HttpLoggingInterceptor().apply {
@@ -76,9 +78,8 @@ class OrderRepository private constructor(context: Context) {
             
             // Handle 401 Unauthorized - token expired or invalid
             if (response.code == 401) {
-                Log.w(TAG, "Received 401 Unauthorized - token may be expired")
-                // Token will be cleared on next login attempt
-                // Could trigger logout flow here if needed
+                Log.w(TAG, "Received 401 Unauthorized - token expired or invalid")
+                authErrorHandler.handleAuthError()
             }
             
             response

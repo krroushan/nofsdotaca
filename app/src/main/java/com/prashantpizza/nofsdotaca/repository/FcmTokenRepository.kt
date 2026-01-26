@@ -3,6 +3,7 @@ package com.prashantpizza.nofsdotaca.repository
 import android.content.Context
 import android.util.Log
 import com.prashantpizza.nofsdotaca.utils.TokenManager
+import com.prashantpizza.nofsdotaca.utils.AuthErrorHandler
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.Interceptor
@@ -61,6 +62,7 @@ class FcmTokenRepository private constructor(context: Context) {
     }
     
     private val tokenManager: TokenManager = TokenManager.getInstance(context)
+    private val authErrorHandler: AuthErrorHandler = AuthErrorHandler.getInstance(context)
     
     private val apiService: FcmTokenApiService by lazy {
         val loggingInterceptor = HttpLoggingInterceptor().apply {
@@ -80,7 +82,15 @@ class FcmTokenRepository private constructor(context: Context) {
                 originalRequest
             }
             
-            chain.proceed(newRequest)
+            val response = chain.proceed(newRequest)
+            
+            // Handle 401 Unauthorized - token expired or invalid
+            if (response.code == 401) {
+                Log.w(TAG, "Received 401 Unauthorized - token expired or invalid")
+                authErrorHandler.handleAuthError()
+            }
+            
+            response
         }
         
         val client = OkHttpClient.Builder()

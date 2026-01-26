@@ -54,6 +54,7 @@ import com.prashantpizza.nofsdotaca.ui.OrderDialog
 import com.prashantpizza.nofsdotaca.ui.screens.PermissionsScreen
 import com.prashantpizza.nofsdotaca.ui.theme.NewOrderFullScreenDisplayOverTheAppsCardAppTheme
 import com.prashantpizza.nofsdotaca.utils.TokenManager
+import com.prashantpizza.nofsdotaca.utils.AuthErrorHandler
 import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
@@ -65,6 +66,7 @@ class MainActivity : ComponentActivity() {
     private lateinit var repository: OrderRepository
     private lateinit var fcmTokenRepository: FcmTokenRepository
     private lateinit var tokenManager: TokenManager
+    private lateinit var authErrorHandler: AuthErrorHandler
     private var isAuthenticated by mutableStateOf(false)
     private var currentOrder by mutableStateOf<OrderNotification?>(null)
     private var showOrderDialog by mutableStateOf(false)
@@ -153,6 +155,33 @@ class MainActivity : ComponentActivity() {
         tokenManager = TokenManager.getInstance(this)
         repository = OrderRepository.getInstance(this)
         fcmTokenRepository = FcmTokenRepository.getInstance(this)
+        authErrorHandler = AuthErrorHandler.getInstance(this)
+        
+        // Set logout callback for auth error handler
+        authErrorHandler.setLogoutCallback {
+            // Show session expired message
+            Toast.makeText(this, "Session expired. Please login again.", Toast.LENGTH_LONG).show()
+            
+            // Remove FCM token from backend before logout
+            lifecycleScope.launch {
+                fcmTokenRepository.removeToken().onFailure {
+                    Log.w(TAG, "Failed to remove FCM token on logout: ${it.message}")
+                }
+            }
+            
+            // Clear tokens and logout
+            tokenManager.clearTokens()
+            isAuthenticated = false
+            showPermissionsScreen = false
+            
+            // Unregister receiver
+            try {
+                LocalBroadcastManager.getInstance(this@MainActivity)
+                    .unregisterReceiver(orderReceiver)
+            } catch (e: Exception) {
+                Log.e(TAG, "Error unregistering receiver", e)
+            }
+        }
         
         // Check authentication state
         isAuthenticated = tokenManager.isAuthenticated()
