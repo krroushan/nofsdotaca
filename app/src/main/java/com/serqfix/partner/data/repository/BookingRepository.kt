@@ -36,6 +36,15 @@ class BookingRepository {
         }
     }
     
+    suspend fun getCurrentBooking(providerId: String): Result<com.serqfix.partner.data.api.BookingResponse> = withContext(Dispatchers.IO) {
+        try {
+            val response = apiService.getCurrentBooking(providerId)
+            Result.success(response)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+    
     suspend fun acceptBooking(bookingId: String, providerId: String, lat: Double? = null, lng: Double? = null): Result<com.serqfix.partner.data.api.BookingResponse> = withContext(Dispatchers.IO) {
         try {
             val response = apiService.acceptBooking(AcceptBookingRequest(bookingId, providerId, lat, lng))

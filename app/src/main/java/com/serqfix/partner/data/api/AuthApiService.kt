@@ -1,5 +1,6 @@
 package com.serqfix.partner.data.api
 
+import com.google.gson.annotations.SerializedName
 import retrofit2.http.Body
 import retrofit2.http.POST
 
@@ -32,7 +33,8 @@ data class EmailPasswordLoginRequest(
 data class AuthResponse(
     val success: Boolean,
     val message: String? = null,
-    val data: UserData? = null,
+    @SerializedName("user")
+    val data: UserData? = null,  // API returns "user" but we map it to "data" for consistency
     val token: String? = null
 )
 
@@ -43,7 +45,37 @@ data class UserData(
     val email: String? = null,
     val name: String? = null,
     val available: Boolean? = null,
-    val token: String? = null
+    val token: String? = null,
+    val active: Boolean? = null,
+    val isVerified: Boolean? = null,
+    val agreementOpen: Boolean? = null,
+    val agreementSigned: Boolean? = null,
+    val role: String? = null,
+    val providerRole: String? = null,
+    val phoneNumberVerified: Boolean? = null,
+    val aadharVerified: Boolean? = null,
+    val panVerified: Boolean? = null,
+    val bankDetailsVerified: Boolean? = null,
+    val profileImageUploaded: Boolean? = null,
+    val relativeFillup: Boolean? = null,
+    val addressFillup: Boolean? = null,
+    val expertiseFillup: Boolean? = null,
+    val gender: String? = null,
+    val city: String? = null,
+    val state: String? = null,
+    val databaseName: String? = null,
+    val provider_payment_type: String? = null,
+    val work_days: List<String>? = null,
+    val shift_start: String? = null,
+    val shift_end: String? = null,
+    val base_salary: Double? = null,
+    val salary_type: String? = null,
+    val image: ImageData? = null
+)
+
+data class ImageData(
+    val url: String? = null,
+    val name: String? = null
 )
 
 interface AuthApiService {

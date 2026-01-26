@@ -97,3 +97,14 @@ fun estimateTravelTime(distanceKm: Double): Int {
     val timeHours = distanceKm / 30.0
     return (timeHours * 60).toInt() // Time in minutes
 }
+
+/**
+ * Convert LocationData to API LocationData format
+ */
+fun LocationData.toApiLocationData(): com.serqfix.partner.data.api.LocationData {
+    return com.serqfix.partner.data.api.LocationData(
+        latitude = this.latitude,
+        longitude = this.longitude,
+        address = null
+    )
+}

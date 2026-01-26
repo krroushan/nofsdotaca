@@ -52,6 +52,15 @@ class AMCRepository {
         }
     }
     
+    suspend fun getPendingAMCAssignments(providerId: String): Result<com.serqfix.partner.data.api.AMCOrdersListResponse> = withContext(Dispatchers.IO) {
+        try {
+            val response = apiService.getPendingAMCAssignments(providerId)
+            Result.success(response)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+    
     suspend fun acceptAMCAssignment(orderId: String, providerId: String): Result<com.serqfix.partner.data.api.AMCOrderResponse> = withContext(Dispatchers.IO) {
         try {
             val response = apiService.acceptAMCAssignment(AcceptAMCAssignmentRequest(orderId, providerId))

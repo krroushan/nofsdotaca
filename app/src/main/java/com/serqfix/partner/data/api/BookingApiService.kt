@@ -115,6 +115,9 @@ interface BookingApiService {
         @Query("endDate") endDate: String? = null
     ): BookingsListResponse
     
+    @GET("mobile-app/bookings/current")
+    suspend fun getCurrentBooking(@Query("providerId") providerId: String): BookingResponse
+    
     @POST("accept-booking")
     suspend fun acceptBooking(@Body request: AcceptBookingRequest): BookingResponse
     

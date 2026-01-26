@@ -80,10 +80,11 @@ fun AppNavigator(
         }
         
         // Main flow
-        composable(NavRoute.TabNavigator.route) {
+        composable(NavRoute.TabNavigator.route) { backStackEntry ->
             TabNavigator(
-                navController = navController,
-                userPreferences = userPreferences
+                userPreferences = userPreferences,
+                parentNavController = navController, // For navigating to routes outside tabs
+                parentViewModelStoreOwner = backStackEntry // Pass ViewModelStoreOwner for nested ViewModels
             )
         }
         

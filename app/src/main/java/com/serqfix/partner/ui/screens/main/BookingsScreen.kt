@@ -13,6 +13,7 @@ import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.serqfix.partner.data.local.UserPreferencesDataStore
 import com.serqfix.partner.data.repository.BookingRepository
+import com.serqfix.partner.ui.components.home.ServiceCard
 import com.serqfix.partner.ui.navigation.NavRoute
 import com.serqfix.partner.ui.theme.PartnerAppTheme
 import kotlinx.coroutines.flow.first
@@ -153,11 +154,9 @@ fun BookingsScreen(
                             verticalArrangement = Arrangement.spacedBy(12.dp)
                         ) {
                             items(bookings) { booking ->
-                                BookingCard(
+                                ServiceCard(
                                     booking = booking,
-                                    onClick = {
-                                        navController.navigate("${NavRoute.ServiceDetails.route}?bookingId=${booking._id ?: booking.bookingId}")
-                                    }
+                                    navController = navController
                                 )
                             }
                         }

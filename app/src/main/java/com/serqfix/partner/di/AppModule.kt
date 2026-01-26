@@ -77,6 +77,18 @@ object AppModule {
     
     @Provides
     @Singleton
+    fun provideAttendanceApiService(): AttendanceApiService {
+        return ApiModule.createService()
+    }
+    
+    @Provides
+    @Singleton
+    fun provideAssetApiService(): AssetApiService {
+        return ApiModule.createService()
+    }
+    
+    @Provides
+    @Singleton
     fun provideUserPreferencesDataStore(@ApplicationContext context: Context): UserPreferencesDataStore {
         return UserPreferencesDataStore(context)
     }
@@ -139,5 +151,17 @@ object AppModule {
     @Singleton
     fun provideBookingCompletionRepository(bookingCompletionApiService: BookingCompletionApiService): BookingCompletionRepository {
         return BookingCompletionRepository()
+    }
+    
+    @Provides
+    @Singleton
+    fun provideAttendanceRepository(attendanceApiService: AttendanceApiService): AttendanceRepository {
+        return AttendanceRepository()
+    }
+    
+    @Provides
+    @Singleton
+    fun provideAssetRepository(assetApiService: AssetApiService): AssetRepository {
+        return AssetRepository()
     }
 }

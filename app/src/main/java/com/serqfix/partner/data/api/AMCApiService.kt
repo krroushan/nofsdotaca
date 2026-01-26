@@ -78,6 +78,9 @@ interface AMCApiService {
     @GET("mobile-app/amc/order/{orderId}")
     suspend fun getAMCOrderById(@Path("orderId") orderId: String): AMCOrderResponse
     
+    @GET("mobile-app/amc/pending-assignments")
+    suspend fun getPendingAMCAssignments(@Query("providerId") providerId: String): AMCOrdersListResponse
+    
     @POST("mobile-app/amc/accept-assignment")
     suspend fun acceptAMCAssignment(@Body request: AcceptAMCAssignmentRequest): AMCOrderResponse
     

@@ -109,9 +109,7 @@ fun OnBoardingScreen(
                     Button(
                         onClick = {
                             isLoading = true
-                            navController.navigate(NavRoute.Login.route) {
-                                popUpTo(NavRoute.Splash.route) { inclusive = true }
-                            }
+                            navController.navigate(NavRoute.Login.route)
                         },
                         modifier = Modifier
                             .fillMaxWidth()

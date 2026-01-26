@@ -7,6 +7,8 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.lifecycle.viewmodel.compose.LocalViewModelStoreOwner
+import androidx.navigation.NavBackStackEntry
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.NavHost
@@ -61,9 +63,13 @@ sealed class TabItem(
 @Composable
 fun TabNavigator(
     isSalaryBased: Boolean = false,
-    navController: androidx.navigation.NavHostController = rememberNavController(),
-    userPreferences: com.serqfix.partner.data.local.UserPreferencesDataStore
+    userPreferences: com.serqfix.partner.data.local.UserPreferencesDataStore,
+    parentNavController: androidx.navigation.NavHostController? = null,
+    parentViewModelStoreOwner: NavBackStackEntry? = null
 ) {
+    // Create own NavController for nested tab navigation
+    val navController = rememberNavController()
+    
     val tabs = if (isSalaryBased) {
         listOf(TabItem.Home, TabItem.Bookings, TabItem.Payments, TabItem.Profile)
     } else {
@@ -111,7 +117,7 @@ fun TabNavigator(
         ) {
             composable(TabItem.Home.route) {
                 HomeScreen(
-                    navController = navController,
+                    navController = parentNavController ?: navController,
                     userPreferences = userPreferences
                 )
             }
@@ -128,7 +134,9 @@ fun TabNavigator(
             composable(TabItem.Wallet.route) {
                 WalletScreen(
                     navController = navController,
-                    walletViewModel = androidx.hilt.navigation.compose.hiltViewModel(),
+                    walletViewModel = androidx.hilt.navigation.compose.hiltViewModel(
+                        viewModelStoreOwner = parentViewModelStoreOwner ?: androidx.lifecycle.viewmodel.compose.LocalViewModelStoreOwner.current!!
+                    ),
                     userPreferences = userPreferences
                 )
             }
@@ -140,7 +148,9 @@ fun TabNavigator(
             composable(TabItem.Profile.route) {
                 ProfileScreen(
                     navController = navController,
-                    profileViewModel = androidx.hilt.navigation.compose.hiltViewModel(),
+                    profileViewModel = androidx.hilt.navigation.compose.hiltViewModel(
+                        viewModelStoreOwner = parentViewModelStoreOwner ?: androidx.lifecycle.viewmodel.compose.LocalViewModelStoreOwner.current!!
+                    ),
                     userPreferences = userPreferences
                 )
             }

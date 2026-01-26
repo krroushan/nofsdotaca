@@ -1,9 +1,9 @@
 package com.serqfix.partner.data.api
 
 object ApiConfig {
-    const val BASE_URL = "https://app-provider.serq.in/api"
-    const val ADMIN_BASE_URL = "https://app.serq.in/api"
-    const val USER_BASE_URL = "https://app.serq.in/api"
+    const val BASE_URL = "https://app-provider.serq.in/api/"
+    const val ADMIN_BASE_URL = "https://app.serq.in/api/"
+    const val USER_BASE_URL = "https://app.serq.in/api/"
     
     // Web URLs
     const val PRIVACY_POLICY_URL = "https://app.serq.in/privacy-policy"

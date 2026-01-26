@@ -20,6 +20,7 @@ import androidx.navigation.NavController
 import com.serqfix.partner.data.local.UserPreferencesDataStore
 import com.serqfix.partner.ui.navigation.NavRoute
 import com.serqfix.partner.ui.theme.PartnerAppTheme
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -48,6 +49,15 @@ fun PermissionsScreen(
         )
     }
 
+    var backgroundLocationPermission by remember {
+        mutableStateOf(
+            ContextCompat.checkSelfPermission(
+                context,
+                Manifest.permission.ACCESS_BACKGROUND_LOCATION
+            ) == PackageManager.PERMISSION_GRANTED
+        )
+    }
+
     // Permission launchers
     val locationPermissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestMultiplePermissions()
@@ -60,6 +70,12 @@ fun PermissionsScreen(
         contract = ActivityResultContracts.RequestPermission()
     ) { isGranted ->
         notificationPermission = isGranted
+    }
+
+    val backgroundLocationPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { isGranted ->
+        backgroundLocationPermission = isGranted
     }
 
     val scope = rememberCoroutineScope()
@@ -114,6 +130,17 @@ fun PermissionsScreen(
                     }
                 )
 
+                // Background Location Permission
+                PermissionCard(
+                    title = "Background Location Permission",
+                    description = "Required to track location even when app is in background",
+                    icon = Icons.Default.LocationOn,
+                    isGranted = backgroundLocationPermission,
+                    onRequest = {
+                        backgroundLocationPermissionLauncher.launch(Manifest.permission.ACCESS_BACKGROUND_LOCATION)
+                    }
+                )
+
                 // Notification Permission
                 PermissionCard(
                     title = "Notification Permission",
@@ -127,16 +154,30 @@ fun PermissionsScreen(
                 
                 Spacer(modifier = Modifier.weight(1f))
 
-                // Show continue button only when both permissions are granted
-                if (locationPermission && notificationPermission) {
+                // Show continue button only when all permissions are granted
+                if (locationPermission && backgroundLocationPermission && notificationPermission) {
                     Button(
                         onClick = {
-                            // Mark permissions as completed and navigate back
-                            // Navigation based on auth status will be handled by splash screen
                             scope.launch {
+                                // Mark permissions as completed
                                 userPreferences.setPermissionsCompleted(true)
+
+                                // Check login status and navigate accordingly
+                                val isLoggedIn = userPreferences.isLoggedIn.first()
+                                val userDataJson = userPreferences.userData.first()
+
+                                if (isLoggedIn && userDataJson != null) {
+                                    // User is logged in - navigate to main app
+                                    navController.navigate(NavRoute.TabNavigator.route) {
+                                        popUpTo(NavRoute.Splash.route) { inclusive = true }
+                                    }
+                                } else {
+                                    // Not logged in - go to onboarding (which leads to login)
+                                    navController.navigate(NavRoute.OnBoarding.route) {
+                                        popUpTo(NavRoute.Splash.route) { inclusive = true }
+                                    }
+                                }
                             }
-                            navController.popBackStack()
                         },
                         modifier = Modifier
                             .fillMaxWidth()

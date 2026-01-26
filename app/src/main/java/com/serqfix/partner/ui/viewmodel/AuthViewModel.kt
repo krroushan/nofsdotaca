@@ -8,6 +8,7 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -30,8 +31,16 @@ class AuthViewModel @Inject constructor(
     init {
         // Check if user is already logged in
         viewModelScope.launch {
+            val currentLoginState = userPreferences.isLoggedIn.first()
+            android.util.Log.d("AuthViewModel", "Init: current login state from DataStore = $currentLoginState")
+            _uiState.value = _uiState.value.copy(isLoggedIn = currentLoginState)
+            android.util.Log.d("AuthViewModel", "Init: UI state updated to isLoggedIn = ${_uiState.value.isLoggedIn}")
+
+            // Continue collecting for future changes
             userPreferences.isLoggedIn.collect { isLoggedIn ->
+                android.util.Log.d("AuthViewModel", "DataStore collection: isLoggedIn changed to $isLoggedIn")
                 _uiState.value = _uiState.value.copy(isLoggedIn = isLoggedIn)
+                android.util.Log.d("AuthViewModel", "UI state updated to isLoggedIn = ${_uiState.value.isLoggedIn}")
             }
         }
     }
@@ -71,6 +80,7 @@ class AuthViewModel @Inject constructor(
                         response.data.let { userData ->
                             userPreferences.setUserData(com.google.gson.Gson().toJson(userData))
                             userPreferences.setToken(response.token ?: userData.token ?: "")
+                            android.util.Log.d("AuthViewModel", "Setting isLoggedIn to true in DataStore")
                             userPreferences.setIsLoggedIn(true)
                             userPreferences.setUserStatus(true)
                             userData.available?.let { userPreferences.setAvailable(it) }
@@ -82,6 +92,8 @@ class AuthViewModel @Inject constructor(
                             isLoggedIn = true,
                             userData = response.data
                         )
+                        android.util.Log.d("AuthViewModel", "Phone OTP verification successful: isLoggedIn set to true in UI state")
+                        android.util.Log.d("AuthViewModel", "UserData set - active: ${response.data?.active}, isVerified: ${response.data?.isVerified}, agreementOpen: ${response.data?.agreementOpen}, agreementSigned: ${response.data?.agreementSigned}")
                     } else {
                         _uiState.value = _uiState.value.copy(
                             isLoading = false,
@@ -109,6 +121,7 @@ class AuthViewModel @Inject constructor(
                         response.data.let { userData ->
                             userPreferences.setUserData(com.google.gson.Gson().toJson(userData))
                             userPreferences.setToken(response.token ?: userData.token ?: "")
+                            android.util.Log.d("AuthViewModel", "Setting isLoggedIn to true in DataStore")
                             userPreferences.setIsLoggedIn(true)
                             userPreferences.setUserStatus(true)
                             userData.available?.let { userPreferences.setAvailable(it) }
@@ -147,6 +160,7 @@ class AuthViewModel @Inject constructor(
                         response.data.let { userData ->
                             userPreferences.setUserData(com.google.gson.Gson().toJson(userData))
                             userPreferences.setToken(response.token ?: userData.token ?: "")
+                            android.util.Log.d("AuthViewModel", "Setting isLoggedIn to true in DataStore")
                             userPreferences.setIsLoggedIn(true)
                             userPreferences.setUserStatus(true)
                             userData.available?.let { userPreferences.setAvailable(it) }
