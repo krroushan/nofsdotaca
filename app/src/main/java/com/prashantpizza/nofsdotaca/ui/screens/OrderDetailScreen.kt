@@ -1,11 +1,15 @@
 package com.prashantpizza.nofsdotaca.ui.screens
 
+import android.content.Intent
+import android.net.Uri
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowDropDown
+import androidx.compose.material.icons.filled.Phone
+import androidx.compose.material.icons.filled.Directions
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -256,7 +260,46 @@ fun OrderDetailContent(
                     DetailRow("Name", order.customer.name)
                 }
                 if (order.customer.phone != null) {
-                    DetailRow("Phone", order.customer.phone)
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 4.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "Phone:",
+                            fontSize = 14.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.weight(1f)
+                        )
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Text(
+                                text = order.customer.phone,
+                                fontSize = 14.sp,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.weight(1f)
+                            )
+                            IconButton(
+                                onClick = { makePhoneCall(context, order.customer.phone) },
+                                modifier = Modifier.size(48.dp),
+                                colors = IconButtonDefaults.iconButtonColors(
+                                    containerColor = Color(0xFF4CAF50), // Green background
+                                    contentColor = Color.White // White icon
+                                )
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Filled.Phone,
+                                    contentDescription = "Call customer",
+                                    modifier = Modifier.size(24.dp)
+                                )
+                            }
+                        }
+                    }
                 }
                 if (order.customer.email != null) {
                     DetailRow("Email", order.customer.email)
@@ -301,6 +344,24 @@ fun OrderDetailContent(
                 }
                 if (address.pincode != null) {
                     DetailRow("Pincode", address.pincode)
+                }
+                
+                // Map Directions Button
+                Spacer(modifier = Modifier.height(8.dp))
+                Button(
+                    onClick = { openMapDirections(context, address) },
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.primary
+                    )
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.Directions,
+                        contentDescription = "Directions",
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Get Directions")
                 }
             }
         } else if (order.orderType == "takeaway" && order.pickupAddress != null) {
@@ -512,6 +573,78 @@ fun OrderDetailContent(
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
+        }
+    }
+}
+
+// Helper function to make phone call
+fun makePhoneCall(context: android.content.Context, phoneNumber: String) {
+    val intent = Intent(Intent.ACTION_DIAL).apply {
+        data = Uri.parse("tel:$phoneNumber")
+    }
+    context.startActivity(intent)
+}
+
+// Helper function to open map directions
+fun openMapDirections(context: android.content.Context, address: com.prashantpizza.nofsdotaca.repository.DeliveryAddress) {
+    val intent = when {
+        // If lat/lng are available, use Google Navigation
+        address.lat != null && address.lng != null -> {
+            Intent(Intent.ACTION_VIEW).apply {
+                data = Uri.parse("google.navigation:q=${address.lat},${address.lng}")
+                setPackage("com.google.android.apps.maps")
+            }
+        }
+        // Otherwise, use geo URI with address query
+        else -> {
+            val addressString = buildString {
+                if (address.addressLine != null) append(address.addressLine)
+                if (address.city != null) {
+                    if (isNotEmpty()) append(", ")
+                    append(address.city)
+                }
+                if (address.state != null) {
+                    if (isNotEmpty()) append(", ")
+                    append(address.state)
+                }
+                if (address.pincode != null) {
+                    if (isNotEmpty()) append(" ")
+                    append(address.pincode)
+                }
+            }
+            if (addressString.isNotEmpty()) {
+                Intent(Intent.ACTION_VIEW).apply {
+                    data = Uri.parse("geo:0,0?q=${Uri.encode(addressString)}")
+                }
+            } else {
+                null
+            }
+        }
+    }
+    
+    if (intent != null) {
+        try {
+            context.startActivity(intent)
+        } catch (e: Exception) {
+            // Fallback to generic geo intent if Google Maps is not available
+            val fallbackIntent = Intent(Intent.ACTION_VIEW).apply {
+                data = Uri.parse("geo:0,0?q=${Uri.encode(buildString {
+                    if (address.addressLine != null) append(address.addressLine)
+                    if (address.city != null) {
+                        if (isNotEmpty()) append(", ")
+                        append(address.city)
+                    }
+                    if (address.state != null) {
+                        if (isNotEmpty()) append(", ")
+                        append(address.state)
+                    }
+                    if (address.pincode != null) {
+                        if (isNotEmpty()) append(" ")
+                        append(address.pincode)
+                    }
+                })}")
+            }
+            context.startActivity(fallbackIntent)
         }
     }
 }
