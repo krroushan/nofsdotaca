@@ -703,61 +703,64 @@ fun MainScreen(
             )
         },
         bottomBar = {
-            NavigationBar(
-                containerColor = Color.White
-            ) {
-                NavigationBarItem(
-                    icon = { 
-                        TabIcon(
-                            icon = TabItem.Orders.icon,
-                            isSelected = selectedTab == TabItem.Orders,
-                            selectedColor = Color(0xFF2196F3), // Blue
-                            unselectedColor = Color(0xFF757575) // Gray
-                        )
-                    },
-                    label = { Text(TabItem.Orders.title) },
-                    selected = selectedTab == TabItem.Orders,
-                    onClick = { selectedTab = TabItem.Orders }
-                )
-                NavigationBarItem(
-                    icon = { 
-                        TabIcon(
-                            icon = TabItem.POS.icon,
-                            isSelected = selectedTab == TabItem.POS,
-                            selectedColor = Color(0xFF4CAF50), // Green
-                            unselectedColor = Color(0xFF757575) // Gray
-                        )
-                    },
-                    label = { Text(TabItem.POS.title) },
-                    selected = selectedTab == TabItem.POS,
-                    onClick = { selectedTab = TabItem.POS }
-                )
-                NavigationBarItem(
-                    icon = { 
-                        TabIcon(
-                            icon = TabItem.Payments.icon,
-                            isSelected = selectedTab == TabItem.Payments,
-                            selectedColor = Color(0xFFFF9800), // Orange
-                            unselectedColor = Color(0xFF757575) // Gray
-                        )
-                    },
-                    label = { Text(TabItem.Payments.title) },
-                    selected = selectedTab == TabItem.Payments,
-                    onClick = { selectedTab = TabItem.Payments }
-                )
-                NavigationBarItem(
-                    icon = { 
-                        TabIcon(
-                            icon = TabItem.Profile.icon,
-                            isSelected = selectedTab == TabItem.Profile,
-                            selectedColor = Color(0xFF9C27B0), // Purple
-                            unselectedColor = Color(0xFF757575) // Gray
-                        )
-                    },
-                    label = { Text(TabItem.Profile.title) },
-                    selected = selectedTab == TabItem.Profile,
-                    onClick = { selectedTab = TabItem.Profile }
-                )
+            // Only show bottom navigation bar when not viewing order details
+            if (selectedOrderId == null) {
+                NavigationBar(
+                    containerColor = Color.White
+                ) {
+                    NavigationBarItem(
+                        icon = { 
+                            TabIcon(
+                                icon = TabItem.Orders.icon,
+                                isSelected = selectedTab == TabItem.Orders,
+                                selectedColor = Color(0xFF2196F3), // Blue
+                                unselectedColor = Color(0xFF757575) // Gray
+                            )
+                        },
+                        label = { Text(TabItem.Orders.title) },
+                        selected = selectedTab == TabItem.Orders,
+                        onClick = { selectedTab = TabItem.Orders }
+                    )
+                    NavigationBarItem(
+                        icon = { 
+                            TabIcon(
+                                icon = TabItem.POS.icon,
+                                isSelected = selectedTab == TabItem.POS,
+                                selectedColor = Color(0xFF4CAF50), // Green
+                                unselectedColor = Color(0xFF757575) // Gray
+                            )
+                        },
+                        label = { Text(TabItem.POS.title) },
+                        selected = selectedTab == TabItem.POS,
+                        onClick = { selectedTab = TabItem.POS }
+                    )
+                    NavigationBarItem(
+                        icon = { 
+                            TabIcon(
+                                icon = TabItem.Payments.icon,
+                                isSelected = selectedTab == TabItem.Payments,
+                                selectedColor = Color(0xFFFF9800), // Orange
+                                unselectedColor = Color(0xFF757575) // Gray
+                            )
+                        },
+                        label = { Text(TabItem.Payments.title) },
+                        selected = selectedTab == TabItem.Payments,
+                        onClick = { selectedTab = TabItem.Payments }
+                    )
+                    NavigationBarItem(
+                        icon = { 
+                            TabIcon(
+                                icon = TabItem.Profile.icon,
+                                isSelected = selectedTab == TabItem.Profile,
+                                selectedColor = Color(0xFF9C27B0), // Purple
+                                unselectedColor = Color(0xFF757575) // Gray
+                            )
+                        },
+                        label = { Text(TabItem.Profile.title) },
+                        selected = selectedTab == TabItem.Profile,
+                        onClick = { selectedTab = TabItem.Profile }
+                    )
+                }
             }
         }
     ) { innerPadding ->
