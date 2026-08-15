@@ -3,8 +3,10 @@ package com.prashantpizza.nofsdotaca.ui.screens
 import android.content.Intent
 import android.net.Uri
 import androidx.compose.foundation.background
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowDropDown
@@ -717,13 +719,7 @@ fun OrderItemRow(item: com.prashantpizza.nofsdotaca.repository.OrderItem) {
                 fontSize = 14.sp,
                 fontWeight = FontWeight.Medium
             )
-            if (item.selectedSize != null) {
-                Text(
-                    text = "Size: ${item.selectedSize.size ?: "Regular"}",
-                    fontSize = 12.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
+            OrderItemCustomizationChips(item)
             if (!item.specialInstructions.isNullOrEmpty()) {
                 Text(
                     text = "Note: ${item.specialInstructions}",
@@ -749,6 +745,110 @@ fun OrderItemRow(item: com.prashantpizza.nofsdotaca.repository.OrderItem) {
             )
         }
     }
+}
+
+@Composable
+fun OrderItemCustomizationChips(item: com.prashantpizza.nofsdotaca.repository.OrderItem) {
+    val sizeLabel = item.selectedSize?.size
+    val crustLabel = item.selectedCrust?.crust
+    val hasToppings = item.selectedToppings.orEmpty().any { !it.topping.isNullOrBlank() }
+    val hasAddOns = item.selectedAddOns.orEmpty().any { !it.addOn.isNullOrBlank() }
+
+    if (sizeLabel.isNullOrBlank() && crustLabel.isNullOrBlank() && !hasToppings && !hasAddOns) {
+        return
+    }
+
+    Column(
+        modifier = Modifier.padding(top = 6.dp),
+        verticalArrangement = Arrangement.spacedBy(6.dp)
+    ) {
+        if (!sizeLabel.isNullOrBlank()) {
+            CustomizationChipRow {
+                CustomizationChip(
+                    text = "Size: $sizeLabel",
+                    background = Color(0xFFE2E8F0),
+                    foreground = Color(0xFF2D3748)
+                )
+            }
+        }
+        if (!crustLabel.isNullOrBlank()) {
+            CustomizationChipRow {
+                CustomizationChip(
+                    text = "Crust: $crustLabel${extraPrice(item.selectedCrust?.price)}",
+                    background = Color(0xFFFEF3C7),
+                    foreground = Color(0xFF92400E)
+                )
+            }
+        }
+        if (hasToppings) {
+            CustomizationChipRow(label = "Toppings") {
+                item.selectedToppings.orEmpty().forEach { topping ->
+                    val name = topping.topping?.takeIf { it.isNotBlank() } ?: return@forEach
+                    CustomizationChip(
+                        text = "${name}${extraPrice(topping.price)}",
+                        background = Color(0xFFFFEDD5),
+                        foreground = Color(0xFF9A3412)
+                    )
+                }
+            }
+        }
+        if (hasAddOns) {
+            CustomizationChipRow(label = "Add-ons") {
+                item.selectedAddOns.orEmpty().forEach { addon ->
+                    val name = addon.addOn?.takeIf { it.isNotBlank() } ?: return@forEach
+                    CustomizationChip(
+                        text = "${name}${extraPrice(addon.price)}",
+                        background = Color(0xFFD1FAE5),
+                        foreground = Color(0xFF065F46)
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun CustomizationChipRow(
+    label: String? = null,
+    content: @Composable RowScope.() -> Unit
+) {
+    Row(
+        modifier = Modifier.horizontalScroll(rememberScrollState()),
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        if (!label.isNullOrBlank()) {
+            Text(
+                text = label,
+                fontSize = 11.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = Color(0xFF6B7280)
+            )
+        }
+        content()
+    }
+}
+
+private fun extraPrice(price: Double?): String {
+    val value = price ?: 0.0
+    return if (value > 0) " +₹${value.toInt()}" else ""
+}
+
+@Composable
+fun CustomizationChip(
+    text: String,
+    background: Color,
+    foreground: Color
+) {
+    Text(
+        text = text,
+        fontSize = 11.sp,
+        fontWeight = FontWeight.SemiBold,
+        color = foreground,
+        modifier = Modifier
+            .background(background, RoundedCornerShape(999.dp))
+            .padding(horizontal = 8.dp, vertical = 3.dp)
+    )
 }
 
 @OptIn(ExperimentalMaterial3Api::class)

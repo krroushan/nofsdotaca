@@ -27,6 +27,29 @@ data class OrderItemSize(
     val hasSpecificInventory: Boolean?
 )
 
+data class OrderItemCrust(
+    val crustId: String?,
+    val crust: String?,
+    val crustSize: String?,
+    val price: Double?,
+    val serves: Int?
+)
+
+data class OrderItemTopping(
+    val toppingId: String?,
+    val topping: String?,
+    val toppingSize: String?,
+    val image: String?,
+    val price: Double?
+)
+
+data class OrderItemAddOn(
+    val addOnId: String?,
+    val addOn: String?,
+    val image: String?,
+    val price: Double?
+)
+
 // Product ID can be either a string or a populated object
 data class PopulatedProduct(
     val _id: String?,
@@ -165,9 +188,9 @@ data class OrderItem(
     val productName: String?,
     val productImage: String?,
     val selectedSize: OrderItemSize?,
-    val selectedCrust: Any?,
-    val selectedToppings: List<Any>?,
-    val selectedAddOns: List<Any>?,
+    val selectedCrust: OrderItemCrust?,
+    val selectedToppings: List<OrderItemTopping>?,
+    val selectedAddOns: List<OrderItemAddOn>?,
     val quantity: Int?,
     val basePrice: Double?,
     val customizationPrice: Double?,
