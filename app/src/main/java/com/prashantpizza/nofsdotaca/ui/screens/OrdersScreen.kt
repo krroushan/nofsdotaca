@@ -209,7 +209,8 @@ fun OrderCard(
                 Text(
                     text = order.orderNumber,
                     fontSize = 18.sp,
-                    fontWeight = FontWeight.Bold
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface
                 )
                 // Status badge
                 Surface(

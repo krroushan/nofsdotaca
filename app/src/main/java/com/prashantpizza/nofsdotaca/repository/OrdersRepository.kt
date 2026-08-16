@@ -50,12 +50,69 @@ data class OrderItemAddOn(
     val price: Double?
 )
 
+data class OrderItemOffer(
+    val offerId: String?,
+    val offerType: String?,
+    val isFreeItem: Boolean?,
+    val originalPrice: Double?,
+    val offerDiscount: Double?,
+    val offerTitle: String?,
+    val badgeColor: String?,
+    val offerPrice: Double?
+)
+
+data class OrderCoupon(
+    val couponId: String?,
+    val code: String?,
+    val name: String?,
+    val discount: Double?,
+    val type: String?,
+    val value: Double?
+)
+
+data class OrderHistoryPerformer(
+    val userId: String?,
+    val userName: String?,
+    val image: String?,
+    val role: String?
+)
+
+data class OrderHistoryEntry(
+    val status: String?,
+    val paymentStatus: String?,
+    val paymentMethod: String?,
+    val action: String?,
+    val description: String?,
+    val source: String?,
+    val performedBy: OrderHistoryPerformer?,
+    val timestamp: String?,
+    val notes: String?
+)
+
 // Product ID can be either a string or a populated object
 data class PopulatedProduct(
     val _id: String?,
     val name: String?,
     val image: String?
 )
+
+private fun flattenMongoId(parent: JsonObject, field: String) {
+    val element = parent.get(field)
+    val id = when {
+        element == null || element.isJsonNull -> null
+        element.isJsonPrimitive && element.asJsonPrimitive.isString -> element.asString
+        element.isJsonObject -> {
+            val idElement = element.asJsonObject.get("_id")
+            if (idElement != null && idElement.isJsonPrimitive) idElement.asString else null
+        }
+        else -> null
+    }
+    if (id != null) {
+        parent.addProperty(field, id)
+    } else if (element != null && !element.isJsonPrimitive) {
+        parent.remove(field)
+    }
+}
 
 // Custom deserializer for OrderItem to handle productId as string or object
 class OrderItemDeserializer : JsonDeserializer<OrderItem> {
@@ -70,31 +127,14 @@ class OrderItemDeserializer : JsonDeserializer<OrderItem> {
         
         val jsonObject = json.asJsonObject
         val gson = Gson()
-        
-        // Handle productId - can be string or object
-        val productIdElement = jsonObject.get("productId")
-        val productId: String? = when {
-            productIdElement == null || productIdElement.isJsonNull -> null
-            productIdElement.isJsonPrimitive && productIdElement.asJsonPrimitive.isString -> {
-                productIdElement.asString
-            }
-            productIdElement.isJsonObject -> {
-                // Extract _id from populated object
-                val productObj = productIdElement.asJsonObject
-                productObj.get("_id")?.asString
-            }
-            else -> null
-        }
-        
-        // Create a modified JSON object with productId as string
         val modifiedJson = jsonObject.deepCopy()
-        if (productId != null) {
-            modifiedJson.addProperty("productId", productId)
-        } else {
-            modifiedJson.remove("productId")
+        flattenMongoId(modifiedJson, "productId")
+        val offerElement = modifiedJson.get("offer")
+        if (offerElement != null && offerElement.isJsonObject) {
+            val offerObj = offerElement.asJsonObject
+            flattenMongoId(offerObj, "offerId")
+            modifiedJson.add("offer", offerObj)
         }
-        
-        // Deserialize the rest normally
         return gson.fromJson(modifiedJson, OrderItem::class.java)
     }
 }
@@ -146,28 +186,11 @@ class OrderDeserializer : JsonDeserializer<Order> {
             
             for (itemElement in itemsArray) {
                 if (itemElement.isJsonObject) {
-                    val itemObj = itemElement.asJsonObject
-                    val productIdElement = itemObj.get("productId")
-                    
-                    val productId: String? = when {
-                        productIdElement == null || productIdElement.isJsonNull -> null
-                        productIdElement.isJsonPrimitive && productIdElement.asJsonPrimitive.isString -> {
-                            productIdElement.asString
-                        }
-                        productIdElement.isJsonObject -> {
-                            // Extract _id from populated object
-                            val productObj = productIdElement.asJsonObject
-                            productObj.get("_id")?.asString
-                        }
-                        else -> null
-                    }
-                    
-                    // Create a modified item with productId as string
-                    val modifiedItem = itemObj.deepCopy()
-                    if (productId != null) {
-                        modifiedItem.addProperty("productId", productId)
-                    } else {
-                        modifiedItem.remove("productId")
+                    val modifiedItem = itemElement.asJsonObject.deepCopy()
+                    flattenMongoId(modifiedItem, "productId")
+                    val offerElement = modifiedItem.get("offer")
+                    if (offerElement != null && offerElement.isJsonObject) {
+                        flattenMongoId(offerElement.asJsonObject, "offerId")
                     }
                     processedItems.add(modifiedItem)
                 } else {
@@ -176,6 +199,13 @@ class OrderDeserializer : JsonDeserializer<Order> {
             }
             
             modifiedJson.add("items", processedItems)
+        }
+
+        val couponElement = modifiedJson.get("coupon")
+        if (couponElement != null && couponElement.isJsonObject) {
+            val couponObj = couponElement.asJsonObject
+            flattenMongoId(couponObj, "couponId")
+            modifiedJson.add("coupon", couponObj)
         }
         
         // Deserialize the rest normally with the custom gson that has OrderItemDeserializer
@@ -195,7 +225,8 @@ data class OrderItem(
     val basePrice: Double?,
     val customizationPrice: Double?,
     val itemTotal: Double?,
-    val offer: Any?,
+    val gstType: String?,
+    val offer: OrderItemOffer?,
     val specialInstructions: String?,
     val _id: String?
 )
@@ -251,6 +282,7 @@ data class Order(
     val deliveryFeeName: String?,
     val discount: Double?,
     val total: Double?,
+    val coupon: OrderCoupon?,
     val status: String?,
     val payment: OrderPayment?,
     val deliveryAddress: DeliveryAddress?,
@@ -260,6 +292,7 @@ data class Order(
     val deliveryBoy: Any?,
     val restaurantId: String?,
     val notes: String?,
+    val orderHistory: List<OrderHistoryEntry>?,
     val createdAt: String?,
     val updatedAt: String?
 )

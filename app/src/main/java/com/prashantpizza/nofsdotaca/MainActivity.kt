@@ -727,7 +727,8 @@ fun MainScreen(
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = Color.White,
-                    titleContentColor = MaterialTheme.colorScheme.onSurface
+                    titleContentColor = Color(0xFF1A202C),
+                    navigationIconContentColor = Color(0xFF1A202C)
                 )
             )
         },
@@ -735,59 +736,71 @@ fun MainScreen(
             // Only show bottom navigation bar when not viewing order details
             if (selectedOrderId == null) {
                 NavigationBar(
-                    containerColor = Color.White
+                    containerColor = Color.White,
+                    contentColor = Color(0xFF1A202C)
                 ) {
+                    val navItemColors = NavigationBarItemDefaults.colors(
+                        selectedIconColor = Color(0xFF1A202C),
+                        selectedTextColor = Color(0xFF1A202C),
+                        unselectedIconColor = Color(0xFF4A5568),
+                        unselectedTextColor = Color(0xFF2D3748),
+                        indicatorColor = Color.Transparent
+                    )
                     NavigationBarItem(
                         icon = { 
                             TabIcon(
                                 icon = TabItem.Orders.icon,
                                 isSelected = selectedTab == TabItem.Orders,
-                                selectedColor = Color(0xFF2196F3), // Blue
-                                unselectedColor = Color(0xFF757575) // Gray
+                                selectedColor = Color(0xFF1565C0),
+                                unselectedColor = Color(0xFF4A5568)
                             )
                         },
-                        label = { Text(TabItem.Orders.title) },
+                        label = { Text(TabItem.Orders.title, fontWeight = if (selectedTab == TabItem.Orders) FontWeight.Bold else FontWeight.Medium) },
                         selected = selectedTab == TabItem.Orders,
-                        onClick = { selectedTab = TabItem.Orders }
+                        onClick = { selectedTab = TabItem.Orders },
+                        colors = navItemColors
                     )
                     NavigationBarItem(
                         icon = { 
                             TabIcon(
                                 icon = TabItem.POS.icon,
                                 isSelected = selectedTab == TabItem.POS,
-                                selectedColor = Color(0xFF4CAF50), // Green
-                                unselectedColor = Color(0xFF757575) // Gray
+                                selectedColor = Color(0xFF2E7D32),
+                                unselectedColor = Color(0xFF4A5568)
                             )
                         },
-                        label = { Text(TabItem.POS.title) },
+                        label = { Text(TabItem.POS.title, fontWeight = if (selectedTab == TabItem.POS) FontWeight.Bold else FontWeight.Medium) },
                         selected = selectedTab == TabItem.POS,
-                        onClick = { selectedTab = TabItem.POS }
+                        onClick = { selectedTab = TabItem.POS },
+                        colors = navItemColors
                     )
                     NavigationBarItem(
                         icon = { 
                             TabIcon(
                                 icon = TabItem.Payments.icon,
                                 isSelected = selectedTab == TabItem.Payments,
-                                selectedColor = Color(0xFFFF9800), // Orange
-                                unselectedColor = Color(0xFF757575) // Gray
+                                selectedColor = Color(0xFFEF6C00),
+                                unselectedColor = Color(0xFF4A5568)
                             )
                         },
-                        label = { Text(TabItem.Payments.title) },
+                        label = { Text(TabItem.Payments.title, fontWeight = if (selectedTab == TabItem.Payments) FontWeight.Bold else FontWeight.Medium) },
                         selected = selectedTab == TabItem.Payments,
-                        onClick = { selectedTab = TabItem.Payments }
+                        onClick = { selectedTab = TabItem.Payments },
+                        colors = navItemColors
                     )
                     NavigationBarItem(
                         icon = { 
                             TabIcon(
                                 icon = TabItem.Profile.icon,
                                 isSelected = selectedTab == TabItem.Profile,
-                                selectedColor = Color(0xFF9C27B0), // Purple
-                                unselectedColor = Color(0xFF757575) // Gray
+                                selectedColor = Color(0xFF6A1B9A),
+                                unselectedColor = Color(0xFF4A5568)
                             )
                         },
-                        label = { Text(TabItem.Profile.title) },
+                        label = { Text(TabItem.Profile.title, fontWeight = if (selectedTab == TabItem.Profile) FontWeight.Bold else FontWeight.Medium) },
                         selected = selectedTab == TabItem.Profile,
-                        onClick = { selectedTab = TabItem.Profile }
+                        onClick = { selectedTab = TabItem.Profile },
+                        colors = navItemColors
                     )
                 }
             }

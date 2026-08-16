@@ -8,12 +8,18 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.prashantpizza.nofsdotaca.repository.AuthRepository
+import com.prashantpizza.nofsdotaca.ui.theme.BrandPrimary
+import com.prashantpizza.nofsdotaca.ui.theme.OutlineStrong
+import com.prashantpizza.nofsdotaca.ui.theme.TextMuted
+import com.prashantpizza.nofsdotaca.ui.theme.TextPrimary
+import com.prashantpizza.nofsdotaca.ui.theme.TextSecondary
 import com.prashantpizza.nofsdotaca.utils.TokenManager
 import kotlinx.coroutines.launch
 
@@ -31,8 +37,27 @@ fun LoginScreen(
     val scope = rememberCoroutineScope()
     
     val isFormValid = phone.isNotBlank() && password.isNotBlank() && password.length >= 6
+    val fieldColors = OutlinedTextFieldDefaults.colors(
+        focusedTextColor = TextPrimary,
+        unfocusedTextColor = TextPrimary,
+        disabledTextColor = TextSecondary,
+        focusedBorderColor = BrandPrimary,
+        unfocusedBorderColor = OutlineStrong,
+        disabledBorderColor = OutlineStrong,
+        focusedLabelColor = BrandPrimary,
+        unfocusedLabelColor = TextSecondary,
+        disabledLabelColor = TextSecondary,
+        focusedPlaceholderColor = TextMuted,
+        unfocusedPlaceholderColor = TextMuted,
+        cursorColor = BrandPrimary,
+        focusedContainerColor = Color.White,
+        unfocusedContainerColor = Color.White
+    )
     
-    Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
+    Scaffold(
+        modifier = Modifier.fillMaxSize(),
+        containerColor = Color(0xFFF5F5F5)
+    ) { innerPadding ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -48,7 +73,7 @@ fun LoginScreen(
                 text = "Restaurant Login",
                 fontSize = 28.sp,
                 fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.primary
+                color = BrandPrimary
             )
             
             Spacer(modifier = Modifier.height(8.dp))
@@ -56,7 +81,7 @@ fun LoginScreen(
             Text(
                 text = "Enter your phone number and password",
                 fontSize = 14.sp,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                color = TextSecondary
             )
             
             Spacer(modifier = Modifier.height(32.dp))
@@ -74,7 +99,8 @@ fun LoginScreen(
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
                 enabled = !isLoading,
-                isError = errorMessage != null
+                isError = errorMessage != null,
+                colors = fieldColors
             )
             
             // Password Input
@@ -91,7 +117,8 @@ fun LoginScreen(
                 visualTransformation = PasswordVisualTransformation(),
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
                 enabled = !isLoading,
-                isError = errorMessage != null
+                isError = errorMessage != null,
+                colors = fieldColors
             )
             
             // Error Message
@@ -143,7 +170,13 @@ fun LoginScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(56.dp),
-                enabled = isFormValid && !isLoading
+                enabled = isFormValid && !isLoading,
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = BrandPrimary,
+                    contentColor = Color.White,
+                    disabledContainerColor = Color(0xFFB77979),
+                    disabledContentColor = Color.White
+                )
             ) {
                 if (isLoading) {
                     CircularProgressIndicator(
@@ -174,13 +207,15 @@ fun LoginScreen(
                     Text(
                         text = "Note",
                         fontWeight = FontWeight.Bold,
-                        fontSize = 14.sp
+                        fontSize = 14.sp,
+                        color = TextPrimary
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                     Text(
                         text = "Use your registered phone number and password to login. Contact admin if you don't have a password set.",
                         fontSize = 12.sp,
-                        lineHeight = 16.sp
+                        lineHeight = 16.sp,
+                        color = TextSecondary
                     )
                 }
             }

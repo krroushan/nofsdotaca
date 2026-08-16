@@ -1,5 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-
-    <style name="Theme.NewOrderFullScreenDisplayOverTheAppsCardApp" parent="android:Theme.Material.Light.NoActionBar" />
+    <style name="Theme.NewOrderFullScreenDisplayOverTheAppsCardApp" parent="android:Theme.Material.Light.NoActionBar">
+        <item name="android:statusBarColor">#691D0F</item>
+        <item name="android:navigationBarColor">#FFFFFF</item>
+        <item name="android:windowBackground">#F5F5F5</item>
+        <item name="android:windowLightStatusBar">false</item>
+        <item name="android:forceDarkAllowed">false</item>
+    </style>
 </resources>
