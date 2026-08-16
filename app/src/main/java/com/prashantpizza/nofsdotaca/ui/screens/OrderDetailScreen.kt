@@ -865,7 +865,7 @@ fun OrderBillSummaryCard(order: Order) {
     val gstLabel = when {
         !bill.gst.gstEnabled -> "GST (Disabled)"
         bill.gst.gstExempt -> "GST (Exempt)"
-        else -> "GST (${bill.gstRate.toInt()}%)"
+        else -> "GST (${bill.gstRate.toInt()}% on ${formatMoney(bill.gst.taxableAmount)})"
     }
 
     Card(
@@ -937,6 +937,22 @@ fun OrderBillSummaryCard(order: Order) {
 
             if (isExpanded) {
                 Column(modifier = Modifier.padding(16.dp)) {
+                    BillAmountRow("Taxable Amount") {
+                        Text(
+                            text = formatMoney(bill.gst.taxableAmount),
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = Color(0xFF2D3748)
+                        )
+                    }
+                    BillAmountRow("Non-GST Amount") {
+                        Text(
+                            text = formatMoney(bill.gst.nonTaxableAmount),
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = Color(0xFF2D3748)
+                        )
+                    }
                     BillAmountRow("Item Total") {
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             if (bill.originalItemTotal > bill.itemTotal) {
@@ -1008,14 +1024,6 @@ fun OrderBillSummaryCard(order: Order) {
                             )
                         }
                     }
-                    BillAmountRow("Subtotal") {
-                        Text(
-                            text = formatMoney(bill.itemTotal),
-                            fontSize = 14.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            color = Color(0xFF2D3748)
-                        )
-                    }
                     BillAmountRow(gstLabel) {
                         Text(
                             text = formatMoney(if (!bill.gst.gstEnabled || bill.gst.gstExempt) 0.0 else bill.tax),
@@ -1036,16 +1044,10 @@ fun OrderBillSummaryCard(order: Order) {
                                     horizontalArrangement = Arrangement.SpaceBetween
                                 ) {
                                     Text(
-                                        text = "+ ${item.name} (GST)",
+                                        text = "+ ${item.name}",
                                         fontSize = 12.sp,
                                         color = Color(0xFFD96100),
                                         modifier = Modifier.weight(1f)
-                                    )
-                                    Text(
-                                        text = formatMoney(item.amount),
-                                        fontSize = 12.sp,
-                                        fontWeight = FontWeight.SemiBold,
-                                        color = Color(0xFFD96100)
                                     )
                                 }
                             }
@@ -1083,22 +1085,6 @@ fun OrderBillSummaryCard(order: Order) {
                                 }
                             }
                         }
-                    }
-                    BillAmountRow("Taxable Amount") {
-                        Text(
-                            text = formatMoney(bill.gst.taxableAmount),
-                            fontSize = 14.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            color = Color(0xFF2D3748)
-                        )
-                    }
-                    BillAmountRow("Non-GST Amount") {
-                        Text(
-                            text = formatMoney(bill.gst.nonTaxableAmount),
-                            fontSize = 14.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            color = Color(0xFF2D3748)
-                        )
                     }
                     HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
                     Row(
