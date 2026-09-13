@@ -2,6 +2,7 @@ package com.prashantpizza.nofsdotaca.repository
 
 import android.content.Context
 import android.util.Log
+import com.prashantpizza.nofsdotaca.BuildConfig
 import com.prashantpizza.nofsdotaca.utils.TokenManager
 import com.prashantpizza.nofsdotaca.utils.AuthErrorHandler
 import kotlinx.coroutines.Dispatchers
@@ -102,7 +103,6 @@ class PaymentsRepository private constructor(context: Context) {
     
     companion object {
         private const val TAG = "PaymentsRepository"
-        private const val BASE_URL = "https://pos.prashantpizza.in/api/mobile/"
         
         @Volatile
         private var instance: PaymentsRepository? = null
@@ -157,7 +157,7 @@ class PaymentsRepository private constructor(context: Context) {
             .build()
         
         Retrofit.Builder()
-            .baseUrl(BASE_URL)
+            .baseUrl(BuildConfig.API_BASE_URL)
             .client(client)
             .addConverterFactory(GsonConverterFactory.create())
             .build()

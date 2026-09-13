@@ -1,6 +1,7 @@
 package com.prashantpizza.nofsdotaca.repository
 
 import android.util.Log
+import com.prashantpizza.nofsdotaca.BuildConfig
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
@@ -57,7 +58,6 @@ class AuthRepository {
     
     companion object {
         private const val TAG = "AuthRepository"
-        private const val BASE_URL = "https://pos.prashantpizza.in/api/mobile/"
         
         @Volatile
         private var instance: AuthRepository? = null
@@ -81,7 +81,7 @@ class AuthRepository {
             .build()
         
         Retrofit.Builder()
-            .baseUrl(BASE_URL)
+            .baseUrl(BuildConfig.API_BASE_URL)
             .client(client)
             .addConverterFactory(GsonConverterFactory.create())
             .build()

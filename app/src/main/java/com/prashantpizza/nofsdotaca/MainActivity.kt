@@ -676,7 +676,7 @@ class MainActivity : ComponentActivity() {
 
 sealed class TabItem(val title: String, val icon: androidx.compose.ui.graphics.vector.ImageVector) {
     object Orders : TabItem("Orders", Icons.Default.ListAlt)
-    object POS : TabItem("POS", Icons.Default.PointOfSale)
+    object POS : TabItem("Supply", Icons.Default.PointOfSale)
     object Payments : TabItem("Payments", Icons.Default.Payment)
     object Profile : TabItem("Profile", Icons.Default.Person)
 }

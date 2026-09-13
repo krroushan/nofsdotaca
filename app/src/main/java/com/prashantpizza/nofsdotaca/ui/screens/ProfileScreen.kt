@@ -16,6 +16,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.prashantpizza.nofsdotaca.repository.RestaurantRepository
+import com.prashantpizza.nofsdotaca.repository.SupplyRepository
 import kotlinx.coroutines.launch
 
 @Composable
@@ -24,11 +25,15 @@ fun ProfileScreen(
 ) {
     val context = LocalContext.current
     val restaurantRepository = remember { RestaurantRepository.getInstance(context) }
+    val supplyRepository = remember { SupplyRepository.getInstance(context) }
     val scope = rememberCoroutineScope()
     
     var restaurantProfile by remember { mutableStateOf<com.prashantpizza.nofsdotaca.repository.RestaurantProfile?>(null) }
     var isLoading by remember { mutableStateOf(true) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
+    var gstDraft by remember { mutableStateOf("") }
+    var gstSaving by remember { mutableStateOf(false) }
+    var gstMessage by remember { mutableStateOf<String?>(null) }
     
     // Fetch restaurant profile on first load
     LaunchedEffect(Unit) {
@@ -38,6 +43,7 @@ fun ProfileScreen(
             val result = restaurantRepository.getProfile()
             result.onSuccess { profile ->
                 restaurantProfile = profile
+                gstDraft = profile.gstNumber ?: ""
                 isLoading = false
             }.onFailure { exception ->
                 errorMessage = exception.message ?: "Failed to load profile"
@@ -263,8 +269,37 @@ fun ProfileScreen(
                             color = MaterialTheme.colorScheme.primary,
                             modifier = Modifier.padding(bottom = 4.dp)
                         )
-                        if (profile.gstNumber != null && profile.gstNumber.isNotEmpty()) {
-                            DetailRow("GST Number", profile.gstNumber)
+                        // Editable GSTIN for supply invoices (F14)
+                        OutlinedTextField(
+                            value = gstDraft,
+                            onValueChange = { gstDraft = it.uppercase() },
+                            label = { Text("GST Number") },
+                            modifier = Modifier.fillMaxWidth(),
+                            singleLine = true
+                        )
+                        Button(
+                            onClick = {
+                                scope.launch {
+                                    gstSaving = true
+                                    gstMessage = null
+                                    supplyRepository.updateGstin(gstDraft.ifBlank { null })
+                                        .onSuccess {
+                                            restaurantProfile = it
+                                            gstDraft = it.gstNumber ?: ""
+                                            gstMessage = "GSTIN saved"
+                                        }
+                                        .onFailure {
+                                            gstMessage = it.message ?: "Failed to save GSTIN"
+                                        }
+                                    gstSaving = false
+                                }
+                            },
+                            enabled = !gstSaving
+                        ) {
+                            Text(if (gstSaving) "Saving…" else "Save GSTIN")
+                        }
+                        gstMessage?.let {
+                            Text(it, fontSize = 12.sp, color = MaterialTheme.colorScheme.primary)
                         }
                         DetailRow("Opening Time", profile.openingHours.openingTime)
                         DetailRow("Closing Time", profile.openingHours.closingTime)

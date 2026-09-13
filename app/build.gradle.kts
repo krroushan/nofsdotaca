@@ -1,3 +1,5 @@
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
@@ -5,6 +7,27 @@ plugins {
     alias(libs.plugins.google.services)
     id("kotlin-parcelize")
 }
+
+/**
+ * Mobile API base URL (must end with `/`).
+ * Override for a physical device against local Next:
+ *   API_BASE_URL=http://192.168.x.x:3000/api/mobile/
+ * in RestaurantApp/local.properties (gitignored).
+ */
+fun loadApiBaseUrlOverride(): String? {
+    val props = Properties()
+    val file = rootProject.file("local.properties")
+    if (!file.exists()) return null
+    file.inputStream().use { props.load(it) }
+    val raw = props.getProperty("API_BASE_URL")?.trim().orEmpty()
+    if (raw.isEmpty()) return null
+    return if (raw.endsWith("/")) raw else "$raw/"
+}
+
+val apiBaseUrlOverride: String? = loadApiBaseUrlOverride()
+val debugApiBaseUrl: String =
+    apiBaseUrlOverride ?: "http://192.168.1.4:3000/api/mobile/"
+val releaseApiBaseUrl: String = "https://pos.prashantpizza.in/api/mobile/"
 
 android {
     namespace = "com.prashantpizza.nofsdotaca"
@@ -18,15 +41,23 @@ android {
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        // Default placeholder; buildTypes override.
+        manifestPlaceholders["usesCleartextTraffic"] = "false"
     }
 
     buildTypes {
+        debug {
+            buildConfigField("String", "API_BASE_URL", "\"$debugApiBaseUrl\"")
+            manifestPlaceholders["usesCleartextTraffic"] = "true"
+        }
         release {
             isMinifyEnabled = false
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+            buildConfigField("String", "API_BASE_URL", "\"$releaseApiBaseUrl\"")
+            manifestPlaceholders["usesCleartextTraffic"] = "false"
         }
     }
     compileOptions {
@@ -38,6 +69,7 @@ android {
     }
     buildFeatures {
         compose = true
+        buildConfig = true
     }
 }
 
