@@ -19,6 +19,8 @@ import retrofit2.http.PATCH
 import retrofit2.http.POST
 import retrofit2.http.Path
 import retrofit2.http.Query
+import okhttp3.Request
+import java.io.File
 import java.util.concurrent.TimeUnit
 
 /** Catalog item — never includes HQ buy cost (costPerUnit). */
@@ -29,6 +31,7 @@ data class SupplyCatalogItem(
     val unit: String?,
     val hsnCode: String?,
     val sellPrice: Double?,
+    val brandName: String?,
     val gstRate: Double?,
     val minOrderQty: Double?,
     val description: String?
@@ -42,7 +45,10 @@ data class SupplyCatalogResponse(
 
 data class SupplyOrderLinePayload(
     val inventoryId: String,
-    val qty: Double
+    val qty: Double,
+    val packCount: Double? = null,
+    val packSize: Double? = null,
+    val packUnit: String? = null
 )
 
 data class SupplyCreateOrderRequest(
@@ -140,8 +146,10 @@ class SupplyRepository private constructor(context: Context) {
         }
     }
 
+    private val appContext = context.applicationContext
     private val tokenManager = TokenManager.getInstance(context)
     private val authErrorHandler = AuthErrorHandler.getInstance(context)
+    private val receiveKeys = mutableMapOf<String, String>()
 
     private val api: SupplyApiService by lazy {
         val logging = HttpLoggingInterceptor().apply {
@@ -224,10 +232,51 @@ class SupplyRepository private constructor(context: Context) {
     suspend fun receiveOrder(id: String): Result<SupplyOrderSummary> =
         withContext(Dispatchers.IO) {
             try {
-                val key = "recv-$id-${System.currentTimeMillis()}"
+                val key = receiveKeys.getOrPut(id) { "recv-$id" }
                 val res = api.receiveOrder(id, key)
-                if (res.success && res.data != null) Result.success(res.data)
-                else Result.failure(Exception(res.error ?: "Receive failed"))
+                if (res.success && res.data != null) {
+                    receiveKeys.remove(id)
+                    Result.success(res.data)
+                } else Result.failure(Exception(res.error ?: "Receive failed"))
+            } catch (e: Exception) {
+                Result.failure(e)
+            }
+        }
+
+    /**
+     * Download PO / invoice PDF with the JWT. Caller shares the file via FileProvider.
+     */
+    suspend fun downloadPdf(relativePath: String, filename: String): Result<File> =
+        withContext(Dispatchers.IO) {
+            try {
+                val token = tokenManager.getAccessToken()
+                    ?: return@withContext Result.failure(Exception("Not signed in"))
+                val url = if (relativePath.startsWith("http")) {
+                    relativePath
+                } else {
+                    "${BuildConfig.API_BASE_URL.trimEnd('/')}/${relativePath.trimStart('/')}"
+                }
+                val client = OkHttpClient.Builder()
+                    .connectTimeout(30, TimeUnit.SECONDS)
+                    .readTimeout(60, TimeUnit.SECONDS)
+                    .build()
+                val request = Request.Builder()
+                    .url(url)
+                    .header("Authorization", "Bearer $token")
+                    .get()
+                    .build()
+                client.newCall(request).execute().use { response ->
+                    if (!response.isSuccessful) {
+                        return@withContext Result.failure(
+                            Exception("PDF download failed (${response.code})")
+                        )
+                    }
+                    val bytes = response.body?.bytes()
+                        ?: return@withContext Result.failure(Exception("Empty PDF"))
+                    val file = File(appContext.cacheDir, filename)
+                    file.writeBytes(bytes)
+                    Result.success(file)
+                }
             } catch (e: Exception) {
                 Result.failure(e)
             }

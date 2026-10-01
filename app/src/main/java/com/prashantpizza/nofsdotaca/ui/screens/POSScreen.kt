@@ -1,7 +1,7 @@
 package com.prashantpizza.nofsdotaca.ui.screens
 
 import android.content.Intent
-import android.net.Uri
+import androidx.core.content.FileProvider
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -44,12 +44,18 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.prashantpizza.nofsdotaca.BuildConfig
 import com.prashantpizza.nofsdotaca.repository.SupplyCatalogItem
 import com.prashantpizza.nofsdotaca.repository.SupplyOrderLinePayload
 import com.prashantpizza.nofsdotaca.repository.SupplyOrderSummary
 import com.prashantpizza.nofsdotaca.repository.SupplyRepository
 import kotlinx.coroutines.launch
+
+private data class SupplyCartLine(
+    val item: SupplyCatalogItem,
+    val packCount: Double,
+    val packSize: String = "1",
+    val packUnit: String = item.unit ?: "pcs"
+)
 
 /**
  * Supply POS tab — catalog + cart + my orders + receive.
@@ -65,7 +71,7 @@ fun POSScreen() {
     var query by remember { mutableStateOf("") }
     var catalog by remember { mutableStateOf<List<SupplyCatalogItem>>(emptyList()) }
     var orders by remember { mutableStateOf<List<SupplyOrderSummary>>(emptyList()) }
-    var cart by remember { mutableStateOf<Map<String, Pair<SupplyCatalogItem, Double>>>(emptyMap()) }
+    var cart by remember { mutableStateOf<Map<String, SupplyCartLine>>(emptyMap()) }
     var loading by remember { mutableStateOf(false) }
     var message by remember { mutableStateOf<String?>(null) }
     var selectedOrder by remember { mutableStateOf<SupplyOrderSummary?>(null) }
@@ -148,8 +154,14 @@ fun POSScreen() {
                     scope.launch {
                         loading = true
                         message = null
-                        val lines = cart.map { (id, pair) ->
-                            SupplyOrderLinePayload(inventoryId = id, qty = pair.second)
+                        val lines = cart.map { (id, line) ->
+                            SupplyOrderLinePayload(
+                                inventoryId = id,
+                                qty = line.packCount,
+                                packCount = line.packCount,
+                                packSize = line.packSize.toDoubleOrNull() ?: 1.0,
+                                packUnit = line.packUnit
+                            )
                         }
                         if (lines.size > 50) {
                             message = "Max 50 lines"
@@ -194,9 +206,26 @@ fun POSScreen() {
                         loading = false
                     }
                 },
-                onOpenPdf = { url, title ->
-                    val intent = Intent(Intent.ACTION_VIEW).apply { data = Uri.parse(url) }
-                    context.startActivity(Intent.createChooser(intent, title))
+                onSharePdf = { relativePath, filename, title ->
+                    scope.launch {
+                        loading = true
+                        repo.downloadPdf(relativePath, filename)
+                            .onSuccess { file ->
+                                val uri = FileProvider.getUriForFile(
+                                    context,
+                                    "${context.packageName}.fileprovider",
+                                    file
+                                )
+                                val intent = Intent(Intent.ACTION_SEND).apply {
+                                    type = "application/pdf"
+                                    putExtra(Intent.EXTRA_STREAM, uri)
+                                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                                }
+                                context.startActivity(Intent.createChooser(intent, title))
+                            }
+                            .onFailure { message = it.message }
+                        loading = false
+                    }
                 }
             )
         }
@@ -210,8 +239,8 @@ private fun SupplyCatalogPane(
     onSearch: () -> Unit,
     loading: Boolean,
     catalog: List<SupplyCatalogItem>,
-    cart: Map<String, Pair<SupplyCatalogItem, Double>>,
-    onCartChange: (Map<String, Pair<SupplyCatalogItem, Double>>) -> Unit,
+    cart: Map<String, SupplyCartLine>,
+    onCartChange: (Map<String, SupplyCartLine>) -> Unit,
     onSubmit: () -> Unit
 ) {
     Column(modifier = Modifier.fillMaxSize()) {
@@ -248,15 +277,27 @@ private fun SupplyCatalogPane(
                                 fontWeight = FontWeight.Medium
                             )
                             Text(
-                                text = "₹${item.sellPrice ?: 0}/${item.unit.orEmpty()} · GST ${item.gstRate ?: 18}%",
+                                text = listOfNotNull(
+                                    item.brandName?.takeIf { it.isNotBlank() },
+                                    "₹${item.sellPrice ?: 0}/${item.unit.orEmpty()}",
+                                    "GST ${item.gstRate ?: 18}%"
+                                ).joinToString(" · "),
                                 fontSize = 12.sp,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
                         IconButton(
                             onClick = {
-                                val currentQty = cart[item._id]?.second ?: 0.0
-                                onCartChange(cart + (item._id to (item to (currentQty + 1.0))))
+                                val current = cart[item._id]
+                                val nextCount = (current?.packCount ?: 0.0) + 1.0
+                                onCartChange(
+                                    cart + (item._id to SupplyCartLine(
+                                        item = item,
+                                        packCount = nextCount,
+                                        packSize = current?.packSize ?: "1",
+                                        packUnit = current?.packUnit ?: item.unit ?: "pcs"
+                                    ))
+                                )
                             }
                         ) {
                             Icon(Icons.Default.Add, contentDescription = "Add")
@@ -273,42 +314,61 @@ private fun SupplyCatalogPane(
                 fontWeight = FontWeight.SemiBold
             )
             val cartLines = cart.values.toList()
-            for ((item, qty) in cartLines) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 4.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = item.name.orEmpty(),
-                        modifier = Modifier.weight(1f),
-                        fontSize = 13.sp
-                    )
-                    IconButton(
-                        onClick = {
-                            val next = qty - 1
-                            onCartChange(
-                                if (next <= 0) cart - item._id
-                                else cart + (item._id to (item to next))
-                            )
+            for (line in cartLines) {
+                val item = line.item
+                Column(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            text = item.name.orEmpty(),
+                            modifier = Modifier.weight(1f),
+                            fontSize = 13.sp
+                        )
+                        IconButton(
+                            onClick = {
+                                val next = line.packCount - 1
+                                onCartChange(
+                                    if (next <= 0) cart - item._id
+                                    else cart + (item._id to line.copy(packCount = next))
+                                )
+                            }
+                        ) {
+                            Icon(Icons.Default.Remove, contentDescription = "Decrease")
                         }
-                    ) {
-                        Icon(Icons.Default.Remove, contentDescription = "Decrease")
-                    }
-                    Text(
-                        text = qty.toInt().toString(),
-                        modifier = Modifier.width(28.dp)
-                    )
-                    IconButton(
-                        onClick = {
-                            onCartChange(cart + (item._id to (item to (qty + 1))))
+                        Text(
+                            text = line.packCount.toInt().toString(),
+                            modifier = Modifier.width(28.dp)
+                        )
+                        IconButton(
+                            onClick = {
+                                onCartChange(cart + (item._id to line.copy(packCount = line.packCount + 1)))
+                            }
+                        ) {
+                            Icon(Icons.Default.Add, contentDescription = "Increase")
                         }
-                    ) {
-                        Icon(Icons.Default.Add, contentDescription = "Increase")
+                        IconButton(onClick = { onCartChange(cart - item._id) }) {
+                            Icon(Icons.Default.Delete, contentDescription = "Remove")
+                        }
                     }
-                    IconButton(onClick = { onCartChange(cart - item._id) }) {
-                        Icon(Icons.Default.Delete, contentDescription = "Remove")
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        OutlinedTextField(
+                            value = line.packSize,
+                            onValueChange = { value ->
+                                onCartChange(cart + (item._id to line.copy(packSize = value)))
+                            },
+                            label = { Text("Pack") },
+                            modifier = Modifier.weight(1f),
+                            singleLine = true
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        OutlinedTextField(
+                            value = line.packUnit,
+                            onValueChange = { value ->
+                                onCartChange(cart + (item._id to line.copy(packUnit = value)))
+                            },
+                            label = { Text("Unit") },
+                            modifier = Modifier.weight(1f),
+                            singleLine = true
+                        )
                     }
                 }
             }
@@ -331,7 +391,7 @@ private fun SupplyOrdersPane(
     onSelectOrder: (String) -> Unit,
     onClearSelection: () -> Unit,
     onReceive: (String) -> Unit,
-    onOpenPdf: (url: String, title: String) -> Unit
+    onSharePdf: (relativePath: String, filename: String, title: String) -> Unit
 ) {
     if (selectedOrder != null) {
         val order = selectedOrder
@@ -370,9 +430,10 @@ private fun SupplyOrdersPane(
                 Spacer(modifier = Modifier.height(8.dp))
                 TextButton(
                     onClick = {
-                        onOpenPdf(
-                            "${BuildConfig.API_BASE_URL}supply/orders/${order._id}/po-pdf",
-                            "Open PO PDF"
+                        onSharePdf(
+                            "supply/orders/${order._id}/po-pdf",
+                            "PO-${order.orderNumber ?: order._id}.pdf",
+                            "Share PO PDF"
                         )
                     }
                 ) {
@@ -382,9 +443,10 @@ private fun SupplyOrdersPane(
             if (order.status == "invoiced") {
                 TextButton(
                     onClick = {
-                        onOpenPdf(
-                            "${BuildConfig.API_BASE_URL}supply/orders/${order._id}/invoice-pdf",
-                            "Open invoice PDF"
+                        onSharePdf(
+                            "supply/orders/${order._id}/invoice-pdf",
+                            "INV-${order.orderNumber ?: order._id}.pdf",
+                            "Share invoice PDF"
                         )
                     }
                 ) {
