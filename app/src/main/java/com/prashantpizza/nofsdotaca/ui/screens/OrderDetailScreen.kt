@@ -863,7 +863,7 @@ fun OrderBillSummaryCard(order: Order) {
     val bill = buildOrderBillBreakdown(order)
     var isExpanded by remember { mutableStateOf(true) }
     val gstLabel = when {
-        !bill.gst.gstEnabled -> "GST (Disabled)"
+        !bill.gst.gstEnabled -> "GST (Not applicable)"
         bill.gst.gstExempt -> "GST (Exempt)"
         else -> "GST (${bill.gstRate.toInt()}% on ${formatMoney(bill.gst.taxableAmount)})"
     }
